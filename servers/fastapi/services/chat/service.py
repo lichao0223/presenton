@@ -15,6 +15,7 @@ from llmai.shared import (  # type: ignore[import-not-found]
     TextContentPart,
     ToolResponseMessage,
     UserMessage,
+    WebSearchTool
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,6 +82,7 @@ class PresentationChatService:
         client = get_client(config=get_llm_config())
         model = get_model()
         tools = self._tools.get_tool_definitions()
+        tools.append(WebSearchTool())
 
         called_tools: list[str] = []
         last_tool_results: list[dict[str, Any]] = []
