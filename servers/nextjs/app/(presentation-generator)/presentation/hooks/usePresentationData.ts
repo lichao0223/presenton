@@ -17,14 +17,16 @@ export const usePresentationData = (
 ) => {
   const dispatch = useDispatch();
 
-  const fetchUserSlides = useCallback(async () => {
+  const fetchUserSlides = useCallback(async (options?: { clearHistory?: boolean }) => {
     try {
       const data = await DashboardApi.getPresentation(presentationId);
 
 
       if (data) {
         dispatch(setPresentationData(data));
-        dispatch(clearHistory());
+        if (options?.clearHistory ?? true) {
+          dispatch(clearHistory());
+        }
         setLoading(false);
       }
       if (data.fonts) {

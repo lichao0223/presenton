@@ -63,6 +63,25 @@ export function getApiUrl(path: string): string {
   return normalizedPath;
 }
 
+/**
+ * getApiUrl may return a path without host (e.g. `/api/v1/...`). A single-argument
+ * `new URL("/api/...")` call is invalid; use this before `new URL(..., ...)`-style
+ * builds or to obtain an absolute string for `URL` + `searchParams`.
+ */
+export function buildAbsoluteApiRequestUrl(
+  path: string,
+  baseForRelative: string = typeof window !== "undefined" &&
+  window.location?.origin
+    ? window.location.origin
+    : "http://127.0.0.1:5000"
+): string {
+  const resolved = getApiUrl(path);
+  if (isAbsoluteHttpUrl(resolved)) {
+    return resolved;
+  }
+  return new URL(resolved, baseForRelative).toString();
+}
+
 function hasBackendAssetPrefix(path: string): boolean {
   return path.startsWith("/static/") || path.startsWith("/app_data/");
 }

@@ -94,7 +94,7 @@ def get_llm_config() -> ClientConfig:
                 raise HTTPException(status_code=400, detail="OpenAI API Key is not set")
             return OpenAIClientConfig(
                 api_key=api_key,
-                api_type=OpenAIApiType.RESPONSES,
+                api_type=OpenAIApiType.COMPLETIONS,
             )
         case LLMProvider.GOOGLE:
             api_key = get_google_api_key_env()

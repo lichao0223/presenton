@@ -54,7 +54,6 @@ def main() -> None:
     p = _sqlite_file_path(sync_url)
     if p is not None:
         paths.append(p)
-        paths.append(p.parent / "container.db")
 
     seen: set[Path] = set()
     for path in paths:

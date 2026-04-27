@@ -103,30 +103,6 @@ const SlideContent = ({ slide, index, presentationId }: SlideContentProps) => {
       });
     }
   };
-  // Scroll to the new slide when streaming and new slides are being generated
-  useEffect(() => {
-    if (
-      presentationData &&
-      presentationData?.slides &&
-      presentationData.slides.length > 1 &&
-      isStreaming
-    ) {
-      // Scroll to the last slide (newly generated during streaming)
-      const lastSlideIndex = presentationData.slides.length - 1;
-      const slideElement = document.getElementById(
-        `slide-${presentationData.slides[lastSlideIndex].index}`
-      );
-      if (slideElement) {
-        slideElement.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-    }
-  }, [presentationData?.slides?.length, isStreaming]);
-
-
-
   useEffect(() => {
 
     if (slide.layout.includes("custom")) {

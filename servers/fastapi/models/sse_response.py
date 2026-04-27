@@ -20,6 +20,15 @@ class SSEStatusResponse(BaseModel):
         ).to_string()
 
 
+class SSETraceResponse(BaseModel):
+    trace: object
+
+    def to_string(self):
+        return SSEResponse(
+            event="response", data=json.dumps({"type": "trace", "trace": self.trace})
+        ).to_string()
+
+
 class SSEErrorResponse(BaseModel):
     detail: str
 

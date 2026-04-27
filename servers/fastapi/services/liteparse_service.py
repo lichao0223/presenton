@@ -227,6 +227,11 @@ class LiteParseService:
 
         return True, "ok"
 
+    @staticmethod
+    def _use_json_runner_output() -> bool:
+        """If true, expect one JSON line on stdout (legacy). Default is plain UTF-8 text (better for large PDFs)."""
+        return (os.getenv("LITEPARSE_RUNNER_OUTPUT") or "").strip().lower() == "json"
+
     def parse_to_markdown(
         self,
         file_path: str,
@@ -271,6 +276,9 @@ class LiteParseService:
         if tessdata:
             command.extend(["--tessdata-path", tessdata])
 
+        use_json = self._use_json_runner_output()
+        command.extend(["--python-bridge", "json" if use_json else "plain"])
+
         LOGGER.info(
             "[LiteParse] Parsing file=%s ocr_enabled=%s ocr_language=%s dpi=%s num_workers=%s",
             file_path,
@@ -293,6 +301,20 @@ class LiteParseService:
             process.returncode,
             _command_str(command),
         )
+
+        if not use_json:
+            if process.returncode != 0:
+                err = (process.stderr or "").strip() or "LiteParse failed"
+                raise LiteParseError(
+                    f"{err}; returncode={process.returncode}; "
+                    f"stderr={_snippet(process.stderr)}; stdout={_snippet(process.stdout)}"
+                )
+            return {
+                "ok": True,
+                "text": (process.stdout or "").lstrip("\ufeff"),
+                "filePath": file_path,
+                "pageCount": 0,
+            }
 
         payload: Dict[str, Any]
         try:

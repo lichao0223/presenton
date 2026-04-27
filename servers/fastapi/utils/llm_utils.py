@@ -10,8 +10,42 @@ from llmai.shared import (
     ResponseFormat,
     normalize_content_parts,
 )
+from llmai.shared.tools import Tool  # type: ignore[import-not-found]
+from pydantic import BaseModel
 
+from enums.llm_provider import LLMProvider
 from utils.llm_config import get_extra_body
+from utils.llm_provider import get_llm_provider
+from utils.schema_utils import flatten_json_schema
+
+
+def _tools_for_google_gemini(tools: list[LLMTool]) -> list[LLMTool]:
+    """Gemini's Python SDK rejects ``$ref`` / ``$defs`` in function parameters; inline them."""
+    converted: list[LLMTool] = []
+    for tool in tools:
+        if not isinstance(tool, Tool):
+            converted.append(tool)
+            continue
+        schema_obj = tool.input_schema
+        if isinstance(schema_obj, dict):
+            raw = dict(schema_obj)
+        elif isinstance(schema_obj, type) and issubclass(schema_obj, BaseModel):
+            raw = schema_obj.model_json_schema()
+        elif isinstance(schema_obj, BaseModel):
+            raw = schema_obj.__class__.model_json_schema()
+        else:
+            converted.append(tool)
+            continue
+        flat = flatten_json_schema(raw)
+        converted.append(
+            Tool(
+                name=tool.name,
+                description=tool.description,
+                schema=flat,
+                strict=tool.strict,
+            )
+        )
+    return converted
 
 
 def get_generate_kwargs(
@@ -30,7 +64,10 @@ def get_generate_kwargs(
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
     if tools:
-        kwargs["tools"] = tools
+        if get_llm_provider() == LLMProvider.GOOGLE:
+            kwargs["tools"] = _tools_for_google_gemini(tools)
+        else:
+            kwargs["tools"] = tools
     if response_format is not None:
         kwargs["response_format"] = response_format
 

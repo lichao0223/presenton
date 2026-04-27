@@ -24,7 +24,8 @@ dependencies = [
     "pathvalidate>=3.3.1",
     "pdfplumber>=0.11.7",
     "sqlmodel>=0.0.24",
-    "llmai==0.1.9",
+    "llmai==0.2.2",
+    "jsonschema>=4.26.0",
 ]
 
 [tool.uv]

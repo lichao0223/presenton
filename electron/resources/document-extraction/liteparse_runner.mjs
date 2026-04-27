@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * CLI bridge for Python: one JSON line on stdout for LiteParse extraction.
+ * CLI bridge for Python: by default, raw extracted text on stdout (--python-bridge plain);
+ * or one JSON line (--python-bridge json) for backward compatibility.
  *
  * OCR follows LlamaIndex LiteParse guidance (built-in Tesseract by default):
  * https://developers.llamaindex.ai/liteparse/guides/ocr/
@@ -56,14 +57,31 @@ function emit(result, exitCode = 0) {
   process.exit(exitCode);
 }
 
+/** "plain" = success: UTF-8 text on stdout only. "json" = one JSON line (legacy, huge payloads can break). */
+const pyBridgeArg = readArg("--python-bridge");
+const pyBridge =
+  pyBridgeArg == null || pyBridgeArg === ""
+    ? "json"
+    : String(pyBridgeArg).trim().toLowerCase() === "plain"
+      ? "plain"
+      : "json";
+
+function bridgeError(message, exitCode) {
+  if (pyBridge === "plain") {
+    process.stderr.write(`${message}\n`);
+    process.exit(exitCode);
+  }
+  emit({ ok: false, error: message }, exitCode);
+}
+
 const filePath = readArg("--file");
 if (!filePath) {
-  emit({ ok: false, error: "Missing required --file argument" }, 2);
+  bridgeError("Missing required --file argument", 2);
 }
 
 const resolvedPath = path.resolve(filePath);
 if (!fs.existsSync(resolvedPath)) {
-  emit({ ok: false, error: `File not found: ${resolvedPath}` }, 2);
+  bridgeError(`File not found: ${resolvedPath}`, 2);
 }
 
 const ocrEnabled = parseBool(readArg("--ocr-enabled"), true);
@@ -117,6 +135,10 @@ try {
 
   const result = await parser.parse(resolvedPath, true);
   const text = result?.text ?? "";
+  if (pyBridge === "plain") {
+    process.stdout.write(text);
+    process.exit(0);
+  }
   emit({
     ok: true,
     filePath: resolvedPath,
@@ -133,6 +155,13 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
+  if (pyBridge === "plain") {
+    if (stack) {
+      process.stderr.write(`${stack}\n`);
+    }
+    process.stderr.write(`${message}\n`);
+    process.exit(1);
+  }
   if (stack) {
     process.stderr.write(`${stack}\n`);
   }

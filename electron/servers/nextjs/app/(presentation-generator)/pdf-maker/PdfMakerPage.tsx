@@ -46,11 +46,7 @@ const PresentationPage = ({ presentation_id }: { presentation_id: string }) => {
     }
   }, [presentationData]);
 
-  // Ensure /app_data and /static image paths resolve through FastAPI in Electron.
-  useEffect(() => {
-    const observer = setupImageUrlConverter();
-    return () => observer?.disconnect();
-  }, []);
+
 
   // Function to fetch the slides
   useEffect(() => {

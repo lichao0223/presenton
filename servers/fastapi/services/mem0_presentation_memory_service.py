@@ -2,9 +2,10 @@ import asyncio
 import json
 import logging
 import os
-from importlib import import_module
 from typing import Any, Optional
 from uuid import UUID
+
+from services.mem0_oss_memory import get_shared_mem0_client
 
 
 LOGGER = logging.getLogger(__name__)
@@ -20,31 +21,6 @@ class Mem0PresentationMemoryService:
         self._namespace_prefix = (
             os.getenv("MEM0_PRESENTATION_NAMESPACE_PREFIX") or "presentation"
         ).strip() or "presentation"
-
-        self._embedder_provider = (
-            os.getenv("MEM0_EMBEDDER_PROVIDER") or "fastembed"
-        ).strip() or "fastembed"
-        self._embedder_model = (
-            os.getenv("MEM0_EMBEDDER_MODEL") or "BAAI/bge-small-en-v1.5"
-        ).strip() or "BAAI/bge-small-en-v1.5"
-        self._embedding_dims = self._to_int(
-            os.getenv("MEM0_EMBEDDING_DIMS"),
-            default=384,
-        )
-
-        app_data_dir = (os.getenv("APP_DATA_DIRECTORY") or "/tmp/presenton").strip()
-        self._mem0_dir = (os.getenv("MEM0_DIR") or os.path.join(app_data_dir, "mem0")).strip()
-        self._qdrant_path = (os.getenv("MEM0_QDRANT_PATH") or os.path.join(self._mem0_dir, "qdrant")).strip()
-        self._history_db_path = (
-            os.getenv("MEM0_HISTORY_DB_PATH")
-            or os.path.join(self._mem0_dir, "history.db")
-        ).strip()
-        self._collection_name = (
-            os.getenv("MEM0_COLLECTION_NAME") or "presenton_memories"
-        ).strip() or "presenton_memories"
-
-        self._client: Any = None
-        self._attempted_client_init = False
 
     @staticmethod
     def _to_bool(value: Optional[str], default: bool = False) -> bool:
@@ -68,27 +44,6 @@ class Mem0PresentationMemoryService:
             return text
         return f"{text[:limit]}\n\n[TRUNCATED]"
 
-    def _get_oss_config(self) -> dict:
-        return {
-            "vector_store": {
-                "provider": "qdrant",
-                "config": {
-                    "collection_name": self._collection_name,
-                    "path": self._qdrant_path,
-                    "on_disk": True,
-                    "embedding_model_dims": self._embedding_dims,
-                },
-            },
-            "embedder": {
-                "provider": self._embedder_provider,
-                "config": {
-                    "model": self._embedder_model,
-                    "embedding_dims": self._embedding_dims,
-                },
-            },
-            "history_db_path": self._history_db_path,
-        }
-
     @staticmethod
     def _is_nonfatal_mem0_error(exc: BaseException) -> bool:
         return isinstance(exc, (Exception, SystemExit))
@@ -96,42 +51,7 @@ class Mem0PresentationMemoryService:
     async def _get_client(self):
         if not self._enabled:
             return None
-
-        if self._client is not None:
-            return self._client
-
-        if self._attempted_client_init:
-            return None
-
-        self._attempted_client_init = True
-
-        try:
-            module = import_module("mem0")
-            memory_cls = getattr(module, "Memory")
-
-            os.makedirs(self._mem0_dir, exist_ok=True)
-            os.makedirs(self._qdrant_path, exist_ok=True)
-
-            config = self._get_oss_config()
-
-            try:
-                self._client = memory_cls.from_config(config)
-            except Exception:
-                # Backward compatibility across mem0 OSS versions.
-                self._client = memory_cls(config)
-
-            LOGGER.info(
-                "Mem0 OSS presentation memory service initialized (qdrant_path=%s, history_db_path=%s)",
-                self._qdrant_path,
-                self._history_db_path,
-            )
-        except BaseException as exc:
-            if not self._is_nonfatal_mem0_error(exc):
-                raise
-            LOGGER.exception("Failed to initialize Mem0 OSS Memory")
-            self._client = None
-
-        return self._client
+        return get_shared_mem0_client()
 
     async def _add_message(self, presentation_id: UUID, message: str):
         client = await self._get_client()

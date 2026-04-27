@@ -9,7 +9,7 @@ from constants.supported_ollama_models import SUPPORTED_OLLAMA_MODELS
 from models.ollama_model_metadata import OllamaModelMetadata
 from models.ollama_model_status import OllamaModelStatus
 from models.sql.ollama_pull_status import OllamaPullStatus
-from services.database import get_container_db_async_session
+from services.database import get_async_session
 from utils.ollama import list_pulled_ollama_models
 
 OLLAMA_ROUTER = APIRouter(prefix="/ollama", tags=["Ollama"])
@@ -29,7 +29,7 @@ async def get_available_models():
 async def pull_model(
     model: str,
     background_tasks: BackgroundTasks,
-    session: AsyncSession = Depends(get_container_db_async_session),
+    session: AsyncSession = Depends(get_async_session),
 ):
 
     if model not in SUPPORTED_OLLAMA_MODELS:
