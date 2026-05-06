@@ -16,6 +16,8 @@ from templates.handler import (
     clone_slide_layout,
     clone_template,
     create_slide_layout,
+    create_slide_layout_job_start,
+    create_slide_layout_job_status,
     edit_slide_layout,
     edit_slide_layout_section,
     get_all_templates,
@@ -27,6 +29,10 @@ from templates.handler import (
     save_template,
     update_template,
     upload_fonts_and_slides_preview,
+)
+from templates.slide_layout_jobs import (
+    SlideLayoutJobStartResponse,
+    SlideLayoutJobStatusResponse,
 )
 
 TEMPLATE_ROUTER = APIRouter(prefix="/template", tags=["Template"])
@@ -47,6 +53,14 @@ TEMPLATE_ROUTER.post("/create/init", response_model=uuid.UUID)(init_create_templ
 TEMPLATE_ROUTER.post("/slide-layout/create", response_model=CreateSlideLayoutResponse)(
     create_slide_layout
 )
+TEMPLATE_ROUTER.post(
+    "/slide-layout/create/start",
+    response_model=SlideLayoutJobStartResponse,
+)(create_slide_layout_job_start)
+TEMPLATE_ROUTER.get(
+    "/slide-layout/create/job/{job_id}",
+    response_model=SlideLayoutJobStatusResponse,
+)(create_slide_layout_job_status)
 TEMPLATE_ROUTER.post("/create/slide-layout", response_model=CreateSlideLayoutResponse)(
     create_slide_layout
 )

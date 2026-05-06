@@ -16,7 +16,7 @@ from constants.presentation import DEFAULT_TEMPLATES
 from models.sql.presentation_layout_code import PresentationLayoutCodeModel
 from models.sql.template import TemplateModel
 from models.sql.template_create_info import TemplateCreateInfoModel
-from services.database import get_async_session
+from services.database import async_session_maker, get_async_session
 from services.export_task_service import EXPORT_TASK_SERVICE
 from templates.example import build_template_example
 from templates.get_layout_by_name import get_layout_by_name
@@ -31,6 +31,12 @@ from templates.prompts import (
     SLIDE_LAYOUT_EDIT_SYSTEM_PROMPT,
 )
 from templates.providers import edit_slide_layout_code, generate_slide_layout_code
+from templates.slide_layout_jobs import (
+    SlideLayoutJobStartResponse,
+    SlideLayoutJobStatusResponse,
+    start_slide_layout_job,
+    get_slide_layout_job,
+)
 from utils.asset_directory_utils import (
     resolve_app_path_to_filesystem,
     resolve_image_path_to_filesystem,
@@ -434,10 +440,10 @@ async def init_create_template(
     return template_create_info.id
 
 
-async def create_slide_layout(
-    request: CreateSlideLayoutRequest = Body(...),
-    sql_session: AsyncSession = Depends(get_async_session),
-):
+async def _create_slide_layout_impl(
+    sql_session: AsyncSession,
+    request: CreateSlideLayoutRequest,
+) -> CreateSlideLayoutResponse:
     template_info = await sql_session.get(TemplateCreateInfoModel, request.id)
     if not template_info:
         raise HTTPException(status_code=400, detail="Template not found")
@@ -465,6 +471,40 @@ async def create_slide_layout(
     normalized_react_component = _normalize_layout_code_for_create(react_component)
 
     return CreateSlideLayoutResponse(react_component=normalized_react_component)
+
+
+async def create_slide_layout(
+    request: CreateSlideLayoutRequest = Body(...),
+    sql_session: AsyncSession = Depends(get_async_session),
+):
+    return await _create_slide_layout_impl(sql_session, request)
+
+
+async def create_slide_layout_job_start(
+    request: CreateSlideLayoutRequest = Body(...),
+):
+    req = request.model_copy()
+
+    async def work() -> str:
+        async with async_session_maker() as session:
+            result = await _create_slide_layout_impl(session, req)
+            return result.react_component
+
+    job_id = await start_slide_layout_job(work)
+    return SlideLayoutJobStartResponse(job_id=job_id)
+
+
+async def create_slide_layout_job_status(
+    job_id: uuid.UUID,
+):
+    rec = await get_slide_layout_job(str(job_id))
+    if rec is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return SlideLayoutJobStatusResponse(
+        status=rec.status,
+        react_component=rec.react_component,
+        error=rec.error,
+    )
 
 
 async def edit_slide_layout(
