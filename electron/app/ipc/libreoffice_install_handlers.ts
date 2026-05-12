@@ -6,7 +6,10 @@ import * as http from "http";
 import { IncomingMessage } from "http";
 import * as path from "path";
 import { app } from "electron";
-import { LIBREOFFICE_DOWNLOAD_URLS, LIBREOFFICE_VERSION } from "../utils/libreoffice-urls";
+import {
+  libreOfficeDownloadChain,
+  type LibreOfficeDownloadPlatform,
+} from "../utils/libreoffice-urls";
 import { getLinuxInstallCommand } from "../utils/libreoffice-check";
 
 // ---------------------------------------------------------------------------
@@ -91,10 +94,8 @@ function downloadWithProgress(
     const doRequest = (requestUrl: string) => {
       const requester = requestUrl.startsWith("https") ? https.get : http.get;
       requester(requestUrl, (res: IncomingMessage) => {
-        if (
-          (res.statusCode === 301 || res.statusCode === 302) &&
-          res.headers.location
-        ) {
+        const redirectCodes = new Set([301, 302, 303, 307, 308]);
+        if (redirectCodes.has(res.statusCode ?? 0) && res.headers.location) {
           sendLog(wc, "info", `HTTP ${res.statusCode} → Redirecting to ${res.headers.location}`);
           doRequest(res.headers.location);
           return;
@@ -189,17 +190,52 @@ function downloadWithProgress(
   });
 }
 
+async function downloadLibreOfficeInstaller(
+  wc: WebContents,
+  platform: LibreOfficeDownloadPlatform
+): Promise<{ dest: string; filename: string }> {
+  const chain = libreOfficeDownloadChain(platform);
+  let lastError: Error | undefined;
+  for (let i = 0; i < chain.length; i++) {
+    const { url, filename } = chain[i];
+    const dest = path.join(app.getPath("temp"), filename);
+    try {
+      if (i > 0) {
+        sendLog(
+          wc,
+          "warn",
+          "Stable mirror no longer hosts this version — trying Document Foundation archive (permanent old builds)…"
+        );
+      }
+      sendProgress(wc, "downloading", 0, `${filename}|`);
+      await downloadWithProgress(
+        url,
+        dest,
+        filename,
+        wc,
+        MIN_INSTALLER_SIZE_BYTES,
+        KNOWN_INSTALLER_SIZES[platform]
+      );
+      return { dest, filename };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      sendLog(wc, "warn", `Download failed: ${lastError.message}`);
+      try {
+        if (fs.existsSync(dest)) fs.unlinkSync(dest);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  throw lastError ?? new Error("LibreOffice download failed");
+}
+
 // ---------------------------------------------------------------------------
 // Platform installers
 // ---------------------------------------------------------------------------
 
 async function installWindows(wc: WebContents): Promise<void> {
-  const url = LIBREOFFICE_DOWNLOAD_URLS.win64;
-  const filename = `LibreOffice_${LIBREOFFICE_VERSION}_Win_x86-64.msi`;
-  const dest = path.join(app.getPath("temp"), filename);
-
-  sendProgress(wc, "downloading", 0, `${filename}|`);
-  await downloadWithProgress(url, dest, filename, wc, MIN_INSTALLER_SIZE_BYTES, KNOWN_INSTALLER_SIZES.win64);
+  const { dest, filename } = await downloadLibreOfficeInstaller(wc, "win64");
 
   sendProgress(wc, "installing");
   sendLog(wc, "info", "Requesting administrator rights (UAC prompt may appear)…");
@@ -270,19 +306,9 @@ async function installMac(wc: WebContents): Promise<void> {
 
   // Fallback: download DMG
   const isArm64 = process.arch === "arm64";
-  const url = isArm64
-    ? LIBREOFFICE_DOWNLOAD_URLS.macArm64
-    : LIBREOFFICE_DOWNLOAD_URLS.macX64;
-  const filename = `LibreOffice_${LIBREOFFICE_VERSION}_MacOS_${isArm64 ? "aarch64" : "x86-64"}.dmg`;
-  const dmgPath = path.join(app.getPath("temp"), filename);
+  const platform: LibreOfficeDownloadPlatform = isArm64 ? "macArm64" : "macX64";
+  const { dest: dmgPath, filename } = await downloadLibreOfficeInstaller(wc, platform);
   const mountPoint = path.join(app.getPath("temp"), "LibreOfficeMount");
-
-  sendProgress(wc, "downloading", 0, `${filename}|`);
-  await downloadWithProgress(
-    url, dmgPath, filename, wc,
-    MIN_INSTALLER_SIZE_BYTES,
-    isArm64 ? KNOWN_INSTALLER_SIZES.macArm64 : KNOWN_INSTALLER_SIZES.macX64
-  );
 
   sendProgress(wc, "installing");
   fs.mkdirSync(mountPoint, { recursive: true });
