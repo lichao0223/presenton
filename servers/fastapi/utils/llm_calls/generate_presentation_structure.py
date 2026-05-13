@@ -102,7 +102,7 @@ def get_messages(
     instructions: Optional[str] = None,
 ) -> list[Message]:
     system_prompt = GET_MESSAGES_SYSTEM_PROMPT.format(
-        user_instruction_header="# User Instruction:" if instructions else "",
+        user_instruction_header=f"# User Instruction: {instructions or ''}" if instructions else "",
         n_slides=n_slides,
     )
 
