@@ -56,11 +56,6 @@ class UserConfig(BaseModel):
     CUSTOM_LLM_API_KEY: Optional[str] = None
     CUSTOM_MODEL: Optional[str] = None
 
-    # OpenAI Compatible Image Provider
-    OPENAI_COMPAT_IMAGE_BASE_URL: Optional[str] = None
-    OPENAI_COMPAT_IMAGE_API_KEY: Optional[str] = None
-    OPENAI_COMPAT_IMAGE_MODEL: Optional[str] = None
-
     # Image Provider
     DISABLE_IMAGE_GENERATION: Optional[bool] = None
     IMAGE_PROVIDER: Optional[str] = None
@@ -74,6 +69,11 @@ class UserConfig(BaseModel):
     # Open WebUI Image Provider
     OPEN_WEBUI_IMAGE_URL: Optional[str] = None
     OPEN_WEBUI_IMAGE_API_KEY: Optional[str] = None
+
+    # OpenAI Compatible Image Provider
+    OPENAI_COMPAT_IMAGE_BASE_URL: Optional[str] = None
+    OPENAI_COMPAT_IMAGE_API_KEY: Optional[str] = None
+    OPENAI_COMPAT_IMAGE_MODEL: Optional[str] = None
 
     # Dalle 3 Quality
     DALL_E_3_QUALITY: Optional[str] = None

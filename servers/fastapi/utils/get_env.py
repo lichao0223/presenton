@@ -74,18 +74,6 @@ def get_openai_model_env():
     return os.getenv("OPENAI_MODEL")
 
 
-def get_openai_compat_image_base_url_env():
-    return os.getenv("OPENAI_COMPAT_IMAGE_BASE_URL")
-
-
-def get_openai_compat_image_api_key_env():
-    return os.getenv("OPENAI_COMPAT_IMAGE_API_KEY")
-
-
-def get_openai_compat_image_model_env():
-    return os.getenv("OPENAI_COMPAT_IMAGE_MODEL")
-
-
 def get_google_api_key_env():
     return os.getenv("GOOGLE_API_KEY")
 
@@ -279,6 +267,8 @@ def get_sentry_traces_sample_rate_env():
 
 def get_sentry_send_default_pii_env():
     return os.getenv("SENTRY_SEND_DEFAULT_PII")
+
+
 # Open WebUI Image Provider
 def get_open_webui_image_url_env():
     return os.getenv("OPEN_WEBUI_IMAGE_URL")
@@ -286,3 +276,16 @@ def get_open_webui_image_url_env():
 
 def get_open_webui_image_api_key_env():
     return os.getenv("OPEN_WEBUI_IMAGE_API_KEY")
+
+
+# OpenAI Compatible Image Provider
+def get_openai_compat_image_base_url_env():
+    return os.getenv("OPENAI_COMPAT_IMAGE_BASE_URL")
+
+
+def get_openai_compat_image_api_key_env():
+    return os.getenv("OPENAI_COMPAT_IMAGE_API_KEY")
+
+
+def get_openai_compat_image_model_env():
+    return os.getenv("OPENAI_COMPAT_IMAGE_MODEL")
