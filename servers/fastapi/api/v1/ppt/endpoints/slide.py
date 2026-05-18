@@ -64,6 +64,7 @@ async def edit_slide(
         image_generation_service,
         slide.content,
         edited_slide_content,
+        icon_weight=presentation.get_layout().icon_weight,
     )
 
     # Always assign a new unique id to the slide

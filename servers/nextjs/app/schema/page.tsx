@@ -16,6 +16,7 @@ const page = () => {
     description: "",
     ordered: false,
     default: false,
+    icon_weight: "bold",
   });
   const isCustomTemplate = templateID.startsWith("custom-") || uuidValidate(templateID);
 
@@ -42,6 +43,7 @@ const page = () => {
             ...customTemplateDetails.template,
             ordered: false,
             default: false,
+            icon_weight: customTemplateDetails.template?.icon_weight || "bold",
           });
         }
       } else {
@@ -52,6 +54,7 @@ const page = () => {
           description: "",
           ordered: false,
           default: true,
+          icon_weight: "bold",
         });
 
       }

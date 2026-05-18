@@ -1,7 +1,7 @@
 import { getHeader, getHeaderForFormData } from "./header";
 import { IconSearch, ImageGenerate, ImageSearch, PreviousGeneratedImagesResponse } from "./params";
 import { ApiResponseHandler } from "./api-error-handler";
-import { getApiUrl } from "@/utils/api";
+import { getApiUrl, resolveBackendAssetUrl } from "@/utils/api";
 
 export class PresentationGenerationApi {
   static async uploadDoc(documents: File[]) {
@@ -210,8 +210,15 @@ export class PresentationGenerationApi {
   
   static async searchIcons(iconSearch: IconSearch) {
     try {
+      const params = new URLSearchParams({
+        query: iconSearch.query,
+        limit: String(iconSearch.limit),
+      });
+      if (iconSearch.icon_weight) {
+        params.set("icon_weight", iconSearch.icon_weight);
+      }
       const response = await fetch(
-        getApiUrl(`/api/v1/ppt/icons/search?query=${iconSearch.query}&limit=${iconSearch.limit}`),
+        getApiUrl(`/api/v1/ppt/icons/search?${params.toString()}`),
         {
           method: "GET",
           headers: getHeader(),
@@ -219,7 +226,12 @@ export class PresentationGenerationApi {
         }
       );
       
-      return await ApiResponseHandler.handleResponse(response, "Failed to search icons");
+      const icons = await ApiResponseHandler.handleResponse(response, "Failed to search icons");
+      return Array.isArray(icons)
+        ? icons.map((icon) =>
+            typeof icon === "string" ? resolveBackendAssetUrl(icon) : icon
+          )
+        : icons;
     } catch (error) {
       console.error("error in icon search", error);
       throw error;

@@ -79,6 +79,7 @@ export interface TemplateGroupSettings {
     description: string;
     ordered: boolean;
     default: boolean;
+    icon_weight?: string;
 }
 
 // Template with settings

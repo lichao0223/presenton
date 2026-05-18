@@ -13,6 +13,7 @@ export interface TemplateSetting {
     description: string;
     ordered: boolean;
     default?: boolean;
+    icon_weight?: string;
 }
 
 export interface TemplateResponse {
@@ -44,4 +45,4 @@ export type LoadingStateType = 'loading' | 'error' | 'empty'
 export interface ComponentProps {
     className?: string
     children?: React.ReactNode
-} 
+}

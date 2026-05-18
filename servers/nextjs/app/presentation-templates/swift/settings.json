@@ -1,6 +1,6 @@
 {
   "description": "Swift layouts for presentations",
   "ordered": false,
-  "default": false
+  "default": false,
+  "icon_weight": "thin"
 }
-

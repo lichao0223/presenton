@@ -8,8 +8,11 @@ from fastapi import HTTPException
 from api.v1.ppt.endpoints import presentation as presentation_endpoint
 from models.generate_presentation_request import GeneratePresentationRequest
 from models.presentation_and_path import PresentationAndPath
+from models.presentation_outline_model import SlideOutlineModel
 from models.presentation_structure_model import PresentationStructureModel
+from models.sql.presentation import PresentationModel
 from templates.presentation_layout import PresentationLayoutModel, SlideLayoutModel
+from tests.conftest import FakeAsyncSession
 
 
 def _run(coro):
@@ -114,6 +117,54 @@ def test_generate_presentation_handler_full_flow_uses_mocked_dependencies(fake_a
     assert response.edit_path == f"/presentation?id={presentation_id}"
     assert len(fake_async_session.added_all) == 2
     assert all(slide.presentation == presentation_id for slide in fake_async_session.added_all)
+
+
+def test_prepare_presentation_preserves_payload_icon_weight():
+    presentation_id = uuid.uuid4()
+    presentation = PresentationModel(
+        id=presentation_id,
+        content="deck",
+        n_slides=1,
+        language="English",
+        tone="default",
+        verbosity="standard",
+        instructions=None,
+    )
+    session = FakeAsyncSession(get_results={presentation_id: presentation})
+    layout = PresentationLayoutModel(
+        name="swift",
+        ordered=False,
+        icon_weight="thin",
+        slides=[
+            SlideLayoutModel(
+                id="swift:feature",
+                name="Feature",
+                description="Feature slide",
+                json_schema={"title": "Feature"},
+            )
+        ],
+    )
+
+    with patch.object(
+        presentation_endpoint,
+        "generate_presentation_structure",
+        new=AsyncMock(return_value=PresentationStructureModel(slides=[0])),
+    ), patch.object(
+        presentation_endpoint.MEM0_PRESENTATION_MEMORY_SERVICE,
+        "store_generated_outlines",
+        new=AsyncMock(),
+    ):
+        response = _run(
+            presentation_endpoint.prepare_presentation(
+                presentation_id=presentation_id,
+                outlines=[SlideOutlineModel(content="## Causes")],
+                layout=layout,
+                sql_session=session,
+            )
+        )
+
+    assert response.layout["icon_weight"] == "thin"
+    assert response.get_layout().icon_weight == "thin"
 
 
 def test_generate_presentation_sync_rejects_invalid_slide_count(fake_async_session):

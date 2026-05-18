@@ -25,50 +25,50 @@ export const usePresentationGeneration = (
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
-  const [loadingState, setLoadingState] = useState<LoadingState>(DEFAULT_LOADING_STATE);
+  const [loadingState, setLoadingState] = useState<LoadingState>(
+    DEFAULT_LOADING_STATE
+  );
 
   const validateInputs = useCallback(() => {
     if (!outlines || outlines.length === 0) {
       toast.error("No Outlines", {
-        description: "Please wait for outlines to load before generating presentation",
+        description:
+          "Please wait for outlines to load before generating presentation",
       });
       return false;
     }
 
     if (!selectedTemplate) {
       toast.error("Select Layout Group", {
-        description: "Please select a layout group before generating presentation",
+        description:
+          "Please select a layout group before generating presentation",
       });
       return false;
     }
 
-
     return true;
   }, [outlines, selectedTemplate]);
 
-
-
   const clearTheme = () => {
-    const element = document.getElementById('presentation-page')
+    const element = document.getElementById("presentation-page");
     if (!element) return;
-    element.style.removeProperty('--primary-color');
-    element.style.removeProperty('--background-color');
-    element.style.removeProperty('--card-color');
-    element.style.removeProperty('--stroke');
-    element.style.removeProperty('--primary-text');
-    element.style.removeProperty('--background-text');
-    element.style.removeProperty('--graph-0');
-    element.style.removeProperty('--graph-1');
-    element.style.removeProperty('--graph-2');
-    element.style.removeProperty('--graph-3');
-    element.style.removeProperty('--graph-4');
-    element.style.removeProperty('--graph-5');
-    element.style.removeProperty('--graph-6');
-    element.style.removeProperty('--graph-7');
-    element.style.removeProperty('--graph-8');
-    element.style.removeProperty('--graph-9');
-
-  }
+    element.style.removeProperty("--primary-color");
+    element.style.removeProperty("--background-color");
+    element.style.removeProperty("--card-color");
+    element.style.removeProperty("--stroke");
+    element.style.removeProperty("--primary-text");
+    element.style.removeProperty("--background-text");
+    element.style.removeProperty("--graph-0");
+    element.style.removeProperty("--graph-1");
+    element.style.removeProperty("--graph-2");
+    element.style.removeProperty("--graph-3");
+    element.style.removeProperty("--graph-4");
+    element.style.removeProperty("--graph-5");
+    element.style.removeProperty("--graph-6");
+    element.style.removeProperty("--graph-7");
+    element.style.removeProperty("--graph-8");
+    element.style.removeProperty("--graph-9");
+  };
 
   const handleSubmit = useCallback(async () => {
     if (!selectedTemplate) {
@@ -84,9 +84,13 @@ export const usePresentationGeneration = (
     const selectedTemplateType =
       typeof selectedTemplate === "string" ? "custom" : "built_in";
     const selectedTemplateName =
-      typeof selectedTemplate === "string" ? null : selectedTemplate?.name || null;
+      typeof selectedTemplate === "string"
+        ? null
+        : selectedTemplate?.name || null;
     const selectedTemplateLayoutCount =
-      typeof selectedTemplate === "string" ? null : selectedTemplate?.layouts?.length || 0;
+      typeof selectedTemplate === "string"
+        ? null
+        : selectedTemplate?.layouts?.length || 0;
 
     trackEvent(MixpanelEvent.Outline_Presentation_Generation_Started, {
       pathname,
@@ -109,7 +113,7 @@ export const usePresentationGeneration = (
       let layout;
 
       // Check if it's a custom template (string = presentationId)
-      if (typeof selectedTemplate === 'string') {
+      if (typeof selectedTemplate === "string") {
         setLoadingState({
           message: "Loading custom template...",
           isLoading: true,
@@ -118,9 +122,14 @@ export const usePresentationGeneration = (
         });
 
         // Fetch custom template details using the shared function
-        const customTemplateDetail = await getCustomTemplateDetails(selectedTemplate);
+        const customTemplateDetail = await getCustomTemplateDetails(
+          selectedTemplate
+        );
 
-        if (!customTemplateDetail || customTemplateDetail.layouts.length === 0) {
+        if (
+          !customTemplateDetail ||
+          customTemplateDetail.layouts.length === 0
+        ) {
           toast.error("Template Error", {
             description: "Failed to load custom template layouts",
           });
@@ -137,20 +146,24 @@ export const usePresentationGeneration = (
         layout = {
           name: customTemplateDetail.id,
           ordered: false,
+          icon_weight: "bold",
           slides: customTemplateDetail.layouts.map((compiledLayout) => ({
-            id: customTemplateDetail.id.startsWith('custom-') ? `${customTemplateDetail.id}:${compiledLayout.layoutId}` : `custom-${customTemplateDetail.id}:${compiledLayout.layoutId}`,
+            id: customTemplateDetail.id.startsWith("custom-")
+              ? `${customTemplateDetail.id}:${compiledLayout.layoutId}`
+              : `custom-${customTemplateDetail.id}:${compiledLayout.layoutId}`,
             name: compiledLayout.layoutName,
             description: compiledLayout.layoutDescription,
             templateID: customTemplateDetail.id,
             templateName: customTemplateDetail.name,
             json_schema: compiledLayout.schemaJSON,
-          }))
+          })),
         };
       } else {
         // Built-in template
         layout = {
           name: selectedTemplate.id,
           ordered: false,
+          icon_weight: selectedTemplate.settings?.icon_weight || "bold",
           slides: selectedTemplate.layouts.map((layoutItem: any) => ({
             id: layoutItem.layoutId,
             name: layoutItem.layoutName,
@@ -158,7 +171,7 @@ export const usePresentationGeneration = (
             templateID: selectedTemplate.id,
             templateName: selectedTemplate.name,
             json_schema: layoutItem.schemaJSON,
-          }))
+          })),
         };
       }
 
@@ -171,17 +184,28 @@ export const usePresentationGeneration = (
       if (response) {
         dispatch(clearPresentationData());
         clearTheme();
-        router.replace(`/presentation?id=${presentationId}&stream=true&type=standard`);
+        router.replace(
+          `/presentation?id=${presentationId}&stream=true&type=standard`
+        );
       }
     } catch (error: any) {
-      console.error('Error In Presentation Generation(prepare).', error);
+      console.error("Error In Presentation Generation(prepare).", error);
       toast.error("Generation Error", {
-        description: error.message || "Error In Presentation Generation(prepare).",
+        description:
+          error.message || "Error In Presentation Generation(prepare).",
       });
     } finally {
       setLoadingState(DEFAULT_LOADING_STATE);
     }
-  }, [validateInputs, presentationId, outlines, dispatch, router, selectedTemplate, pathname]);
+  }, [
+    validateInputs,
+    presentationId,
+    outlines,
+    dispatch,
+    router,
+    selectedTemplate,
+    pathname,
+  ]);
 
   return { loadingState, handleSubmit };
-}; 
+};

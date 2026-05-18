@@ -16,6 +16,8 @@ export interface IconSearch {
   query: string;
 
   limit: number;
+
+  icon_weight?: string;
 }
 
 export interface PreviousGeneratedImagesResponse {

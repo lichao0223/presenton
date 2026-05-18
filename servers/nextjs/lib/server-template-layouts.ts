@@ -10,6 +10,27 @@ export type BuiltinLayoutSlide = {
   json_schema: unknown;
 };
 
+const DEFAULT_ICON_WEIGHT = "bold";
+const ALLOWED_ICON_WEIGHTS = new Set([
+  "bold",
+  "duotone",
+  "fill",
+  "light",
+  "regular",
+  "thin",
+]);
+function normalizeIconWeight(value: unknown): string {
+  if (typeof value !== "string") {
+    return DEFAULT_ICON_WEIGHT;
+  }
+  const normalized = value.trim().toLowerCase().replace("_", "-");
+  return ALLOWED_ICON_WEIGHTS.has(normalized) ? normalized : DEFAULT_ICON_WEIGHT;
+}
+
+function getIconWeightFromSettings(settings: Record<string, unknown>): string {
+  return normalizeIconWeight(settings.icon_weight);
+}
+
 /**
  * Build layout + JSON schemas for a built-in template directory without importing
  * `presentation-templates/index.tsx` (that pulls Recharts/client bundles into RSC).
@@ -23,6 +44,7 @@ export type BuiltinLayoutSlide = {
 export async function buildBuiltinTemplateLayoutPayload(group: string): Promise<{
   name: string;
   ordered: boolean;
+  icon_weight: string;
   slides: BuiltinLayoutSlide[];
 } | null> {
   const dir = path.join(
@@ -39,12 +61,14 @@ export async function buildBuiltinTemplateLayoutPayload(group: string): Promise<
   }
 
   let ordered = false;
+  let icon_weight = DEFAULT_ICON_WEIGHT;
   try {
     const raw = await fs.readFile(path.join(dir, "settings.json"), "utf8");
-    const s = JSON.parse(raw) as { ordered?: boolean };
+    const s = JSON.parse(raw) as Record<string, unknown> & { ordered?: boolean };
     if (typeof s.ordered === "boolean") {
       ordered = s.ordered;
     }
+    icon_weight = getIconWeightFromSettings(s);
   } catch {
     // settings.json optional
   }
@@ -85,5 +109,5 @@ export async function buildBuiltinTemplateLayoutPayload(group: string): Promise<
     return null;
   }
 
-  return { name: group, ordered, slides };
+  return { name: group, ordered, icon_weight, slides };
 }

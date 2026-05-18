@@ -46,7 +46,8 @@ export async function GET() {
                     settings = {
                         description: `${templateName} presentation layouts`,
                         ordered: false,
-                        default: false
+                        default: false,
+                        icon_weight: 'bold'
                     }
                    
                 }
@@ -74,4 +75,4 @@ export async function GET() {
             { status: 500 }
         )
     }
-} 
+}

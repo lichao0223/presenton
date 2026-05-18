@@ -11,16 +11,31 @@ import { Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { PresentationGenerationApi } from "../services/api/presentation-generation";
-import { getStaticFileUrl } from "../utils/others";
 import { toast } from "sonner";
+
+const ICON_WEIGHTS = ["bold", "duotone", "fill", "light", "regular", "thin"];
+const DEFAULT_ICON_WEIGHT = "bold";
+
+const normalizeIconWeight = (weight?: string | null) => {
+  const normalized = (weight || "").trim().toLowerCase().replace("_", "-");
+  return ICON_WEIGHTS.includes(normalized) ? normalized : DEFAULT_ICON_WEIGHT;
+};
+
+const getIconWeightFromUrl = (url?: string | null) => {
+  const match = (url || "").match(/\/static\/icons\/([^/]+)\//);
+  return normalizeIconWeight(match?.[1]);
+};
+
 interface IconsEditorProps {
   icon_prompt?: string[] | null;
+  currentIconUrl?: string;
   onClose?: () => void;
   onIconChange?: (newIconUrl: string, query?: string) => void;
 }
 
 const IconsEditor = ({
   icon_prompt,
+  currentIconUrl,
   onClose,
   onIconChange,
 
@@ -32,6 +47,9 @@ const IconsEditor = ({
   );
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(true);
+  const [selectedWeight, setSelectedWeight] = useState<string>(
+    normalizeIconWeight(getIconWeightFromUrl(currentIconUrl))
+  );
 
   // Search for icons when component opens
   useEffect(() => {
@@ -43,14 +61,16 @@ const IconsEditor = ({
   /**
    * Searches for icons based on the current query
    */
-  const handleIconSearch = async () => {
+  const handleIconSearch = async (weightOverride?: string) => {
     setLoading(true);
     const query = searchQuery.length > 0 ? searchQuery : icon_prompt?.[0] || "";
+    const weight = normalizeIconWeight(weightOverride || selectedWeight);
 
     try {
       const data = await PresentationGenerationApi.searchIcons({
         query,
         limit: 40,
+        icon_weight: weight,
       });
       setIcons(data);
     } catch (error: any) {
@@ -126,6 +146,32 @@ const IconsEditor = ({
                 Search
               </Button>
             </form>
+
+            <div className="flex flex-wrap gap-2" aria-label="Icon weight">
+              {ICON_WEIGHTS.map((weight) => {
+                const isSelected = selectedWeight === weight;
+                return (
+                  <button
+                    key={weight}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedWeight(weight);
+                      handleIconSearch(weight);
+                    }}
+                    className={[
+                      "rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors",
+                      isSelected
+                        ? "border-[#51459e] bg-[#51459e] text-white"
+                        : "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100",
+                    ].join(" ")}
+                  >
+                    {weight}
+                  </button>
+                );
+              })}
+            </div>
 
             {/* Icons Grid */}
             <div className="max-h-[80vh] hide-scrollbar overflow-y-auto p-1">

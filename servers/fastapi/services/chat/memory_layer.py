@@ -22,6 +22,7 @@ from utils.asset_directory_utils import (
     get_images_directory,
     normalize_slide_asset_url,
 )
+from utils.icon_weights import DEFAULT_ICON_WEIGHT
 from utils.process_slides import (
     process_old_and_new_slides_and_fetch_assets,
     process_slide_and_fetch_assets,
@@ -217,6 +218,24 @@ class PresentationChatMemoryLayer:
             return None
         return layout.json_schema
 
+    async def _get_presentation_icon_weight(
+        self, presentation: PresentationModel | None = None
+    ) -> str:
+        if presentation is None:
+            presentation = await self._sql_session.get(
+                PresentationModel, self._presentation_id
+            )
+        if not presentation or not isinstance(presentation.layout, dict):
+            return DEFAULT_ICON_WEIGHT
+        try:
+            return presentation.get_layout().icon_weight
+        except Exception:
+            LOGGER.exception(
+                "Failed to parse presentation icon weight (presentation_id=%s)",
+                self._presentation_id,
+            )
+            return DEFAULT_ICON_WEIGHT
+
     async def generate_image(self, prompt: str) -> str:
         image_generation_service = ImageGenerationService(get_images_directory())
         image = await image_generation_service.generate_image(ImagePrompt(prompt=prompt))
@@ -229,7 +248,11 @@ class PresentationChatMemoryLayer:
         return normalize_slide_asset_url(str(image))
 
     async def generate_icon(self, query: str) -> str:
-        icons = await ICON_FINDER_SERVICE.search_icons(query, k=1)
+        icons = await ICON_FINDER_SERVICE.search_icons(
+            query,
+            k=1,
+            weight=await self._get_presentation_icon_weight(),
+        )
         if icons:
             return normalize_slide_asset_url(icons[0])
         return normalize_slide_asset_url("/static/icons/placeholder.svg")
@@ -257,6 +280,7 @@ class PresentationChatMemoryLayer:
                 "message": f"Layout '{layout_id}' was not found in this presentation.",
                 "validation_errors": [f"Unknown layout_id '{layout_id}'."],
             }
+        icon_weight = await self._get_presentation_icon_weight(presentation)
 
         validation_errors = self._validate_slide_content(
             content=content,
@@ -291,6 +315,7 @@ class PresentationChatMemoryLayer:
                 image_generation_service=image_generation_service,
                 old_slide_content=existing_slide.content or {},
                 new_slide_content=updated_content,
+                icon_weight=icon_weight,
             )
 
             existing_slide.id = uuid.uuid4()
@@ -351,6 +376,7 @@ class PresentationChatMemoryLayer:
         new_assets = await process_slide_and_fetch_assets(
             image_generation_service=image_generation_service,
             slide=new_slide,
+            icon_weight=icon_weight,
         )
 
         self._sql_session.add(new_slide)
