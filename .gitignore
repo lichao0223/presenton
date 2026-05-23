@@ -23,10 +23,8 @@ container.db
 skills-lock.json
 .codex/
 
-# presentation-export runtime (downloaded via scripts/sync-presentation-export.cjs or Docker build)
-presentation-export/index.js
-presentation-export/index.cjs
-presentation-export/py/
+# presenton-export runtime (downloaded via scripts/sync-presentation-export.cjs or Docker build)
+presentation-export/
 .cache/presentation-export/
 servers/fastapi/build/
 servers/fastapi/dist/
