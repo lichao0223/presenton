@@ -1351,26 +1351,16 @@ const Chat = ({
           </div>
           <div className="ml-auto flex items-center gap-2">
             {isSending ? (
-              <>
-                <button
-                  type="button"
-                  disabled
-                  className="flex cursor-wait items-center gap-1.5 whitespace-nowrap rounded-[34px] border border-[#EAECF0] bg-[#F9FAFB] px-3 py-2 text-sm font-medium text-[#667085]"
-                  aria-label="Chat is processing"
-                >
-                  <Loader2 className="h-3 w-3 animate-spin text-[#667085]" />
-                  Processing
-                </button>
-                <button
-                  type="button"
-                  onClick={stopStreaming}
-                  className="flex items-center gap-1.5 whitespace-nowrap rounded-[34px] border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] transition-colors hover:bg-[#F9FAFB]"
-                  aria-label="Stop chat response"
-                >
-                  <Square className="h-3 w-3 fill-current" />
-                  Stop
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={stopStreaming}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-[34px] border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] transition-colors hover:bg-[#F9FAFB]"
+                aria-label="Stop chat response"
+              >
+                <Loader2 className="h-3 w-3 animate-spin text-[#667085]" aria-hidden="true" />
+                <Square className="h-3 w-3 fill-current" aria-hidden="true" />
+                Stop
+              </button>
             ) : (
               <button
                 type="submit"
