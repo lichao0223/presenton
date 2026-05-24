@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { SendHorizontal } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
 import ToolTip from "@/components/ToolTip";
 import { RootState } from "@/store/store";
@@ -53,7 +53,7 @@ const SlideContent = ({
 
   const handleSubmit = async () => {
     if (!editPrompt.trim()) {
-      toast.error("Please enter a prompt before submitting");
+      notify.warning("Prompt required", "Please enter a prompt before submitting.");
       return;
     }
     setIsUpdating(true);
@@ -76,14 +76,17 @@ const SlideContent = ({
           prompt_word_count: editPrompt.trim().split(/\s+/).filter(Boolean)
             .length,
         });
-        toast.success("Slide updated successfully");
+        notify.success("Slide updated", "Your changes were applied to this slide.");
         setEditPrompt("");
+      } else {
+        notify.error(
+          "Slide edit failed",
+          "The server did not return an updated slide. Please try again."
+        );
       }
     } catch (error: any) {
       console.error("Error in slide editing:", error);
-      toast.error("Error in slide editing.", {
-        description: error.message || "Error in slide editing.",
-      });
+      notify.error("Slide edit failed", error.message || "Something went wrong while editing the slide.");
     } finally {
       setIsUpdating(false);
     }
@@ -108,9 +111,7 @@ const SlideContent = ({
       dispatch(deletePresentationSlide(slide.index));
     } catch (error: any) {
       console.error("Error deleting slide:", error);
-      toast.error("Error deleting slide.", {
-        description: error.message || "Error deleting slide.",
-      });
+      notify.error("Could not delete slide", error.message || "Something went wrong while deleting the slide.");
     }
   };
   useEffect(() => {

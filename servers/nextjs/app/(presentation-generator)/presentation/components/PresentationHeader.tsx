@@ -24,7 +24,7 @@ import { PresentationGenerationApi } from "../../services/api/presentation-gener
 import { useDispatch, useSelector } from "react-redux";
 
 import { RootState } from "@/store/store";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { usePresentationUndoRedo } from "../hooks/PresentationUndoRedo";
 import ToolTip from "@/components/ToolTip";
@@ -118,7 +118,7 @@ const PresentationHeader = ({
         const [customThemes] = await Promise.all([ThemeApi.getThemes()]);
         setThemes([...customThemes, ...DEFAULT_THEMES]);
       } catch (e: any) {
-        toast.error(e?.message || "Failed to load themes");
+        notify.error("Could not load themes", e?.message || "Failed to load themes.");
       }
     };
     if (themes.length === 0) {
@@ -204,6 +204,7 @@ const PresentationHeader = ({
   const handleExportPptx = async () => {
     if (isStreaming) return;
 
+    let exportToastId: string | number | undefined;
     try {
       trackEvent(MixpanelEvent.Presentation_Export_Started, {
         pathname,
@@ -211,7 +212,10 @@ const PresentationHeader = ({
         format: "pptx",
         slide_count: presentationData?.slides?.length || 0,
       });
-      toast.info("Exporting PPTX...");
+      exportToastId = notify.loading(
+        "Exporting PPTX",
+        "Your presentation is being exported. This may take a moment."
+      );
       setIsExporting(true);
       // Save the presentation data before exporting
       await PresentationGenerationApi.updatePresentationContent(
@@ -245,12 +249,18 @@ const PresentationHeader = ({
 
         downloadLink(pptxPath, safePptxFileName);
       }
+      notify.success(
+        "Export complete",
+        "Your PPTX file has been downloaded.",
+        { id: exportToastId }
+      );
     } catch (error) {
       console.error("Export failed:", error);
-      toast.error("Having trouble exporting!", {
-        description:
-          "We are having trouble exporting your presentation. Please try again.",
-      });
+      notify.error(
+        "Export failed",
+        "We are having trouble exporting your presentation. Please try again.",
+        exportToastId !== undefined ? { id: exportToastId } : undefined
+      );
     } finally {
       setIsExporting(false);
     }
@@ -259,6 +269,7 @@ const PresentationHeader = ({
   const handleExportPdf = async () => {
     if (isStreaming) return;
 
+    let exportToastId: string | number | undefined;
     try {
       trackEvent(MixpanelEvent.Presentation_Export_Started, {
         pathname,
@@ -266,7 +277,10 @@ const PresentationHeader = ({
         format: "pdf",
         slide_count: presentationData?.slides?.length || 0,
       });
-      toast.info("Exporting PDF...");
+      exportToastId = notify.loading(
+        "Exporting PDF",
+        "Your presentation is being exported. This may take a moment."
+      );
       setIsExporting(true);
       // Save the presentation data before exporting
       await PresentationGenerationApi.updatePresentationContent(
@@ -296,12 +310,18 @@ const PresentationHeader = ({
           throw new Error("Failed to export PDF");
         }
       }
+      notify.success(
+        "Export complete",
+        "Your PDF file has been downloaded.",
+        { id: exportToastId }
+      );
     } catch (err) {
       console.error(err);
-      toast.error("Having trouble exporting!", {
-        description:
-          "We are having trouble exporting your presentation. Please try again.",
-      });
+      notify.error(
+        "Export failed",
+        "We are having trouble exporting your presentation. Please try again.",
+        exportToastId !== undefined ? { id: exportToastId } : undefined
+      );
     } finally {
       setIsExporting(false);
     }

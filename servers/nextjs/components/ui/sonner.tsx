@@ -1,8 +1,19 @@
 "use client"
 
 import type React from "react"
-import { BadgeCheck, Info, Loader2, ShieldAlert } from "lucide-react"
-import { Toaster as Sonner, toast as sonnerToast } from "sonner"
+import { BadgeCheck, Loader2, ShieldAlert, TriangleAlert } from "lucide-react"
+import { Toaster as Sonner, toast as sonnerToast, type ExternalToast } from "sonner"
+
+type NotifyOptions = Pick<ExternalToast, "duration" | "id">
+
+function toastOptions(
+  description?: string,
+  options?: NotifyOptions
+): ExternalToast | undefined {
+  const merged: ExternalToast = { ...options }
+  if (description) merged.description = description
+  return Object.keys(merged).length > 0 ? merged : undefined
+}
 
 /** Blue circle for neutral / informational toasts (matches web `servers/nextjs` Toaster). */
 function NeutralToastIcon() {
@@ -20,14 +31,19 @@ function NeutralToastIcon() {
   )
 }
 
-/** Toasts with both title and description (matches styled [data-title] / [data-description]). */
+/** Standard toast API — title plus optional description (matches styled [data-title] / [data-description]). */
 export const notify = {
-  error: (title: string, description: string) =>
-    sonnerToast.error(title, { description }),
-  success: (title: string, description: string) =>
-    sonnerToast.success(title, { description }),
-  info: (title: string, description: string) =>
-    sonnerToast.info(title, { description }),
+  error: (title: string, description?: string, options?: NotifyOptions) =>
+    sonnerToast.error(title, toastOptions(description, options)),
+  success: (title: string, description?: string, options?: NotifyOptions) =>
+    sonnerToast.success(title, toastOptions(description, options)),
+  info: (title: string, description?: string, options?: NotifyOptions) =>
+    sonnerToast.info(title, toastOptions(description, options)),
+  warning: (title: string, description?: string, options?: NotifyOptions) =>
+    sonnerToast.warning(title, toastOptions(description, options)),
+  loading: (title: string, description?: string, options?: NotifyOptions) =>
+    sonnerToast.loading(title, toastOptions(description, options)),
+  dismiss: (id?: string | number) => sonnerToast.dismiss(id),
 } as const
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
@@ -36,8 +52,8 @@ const Toaster = ({ icons, ...props }: ToasterProps) => {
   const defaultIcons: NonNullable<ToasterProps["icons"]> = {
     success: <BadgeCheck aria-hidden="true" />,
     error: <ShieldAlert aria-hidden="true" />,
-    info: <Info className="fill-[#1880F6] stroke-white" />,
-    warning: <ShieldAlert aria-hidden="true" />,
+    info: <NeutralToastIcon />,
+    warning: <TriangleAlert aria-hidden="true" />,
     loading: <Loader2 aria-hidden="true" className="animate-spin" />,
     close: <span aria-hidden="true">Got it!</span>,
   }
@@ -237,7 +253,9 @@ const Toaster = ({ icons, ...props }: ToasterProps) => {
         style={{ zIndex: 999999999 }}
         className="toaster group z-50 bg-transparent"
         icons={{ ...defaultIcons, ...(icons ?? {}) }}
+        closeButton
         toastOptions={{
+          closeButton: true,
           closeButtonAriaLabel: "Dismiss notification",
           classNames: {
             toast: "group toast",

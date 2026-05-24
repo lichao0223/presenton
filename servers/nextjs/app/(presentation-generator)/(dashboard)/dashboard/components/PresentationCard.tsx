@@ -10,7 +10,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { usePathname, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 
 import { useFontLoader } from "@/app/(presentation-generator)/hooks/useFontLoad";
 import SlideScale from "@/app/(presentation-generator)/components/PresentationRender";
@@ -96,15 +96,13 @@ export const PresentationCard = ({
         presentation_id: id,
         slide_count: presentation?.slides?.length || 0,
       });
-      toast.success("Presentation deleted", {
-        description: "The presentation has been deleted successfully",
-      });
+      notify.success("Presentation deleted", "The presentation was removed from your dashboard.");
       setShowDeleteDialog(false);
       if (onDeleted) {
         onDeleted(id);
       }
     } else {
-      toast.error(response?.message || "Error deleting presentation");
+      notify.error("Could not delete presentation", response?.message || "Something went wrong while deleting the presentation.");
     }
     setIsDeleting(false);
   };

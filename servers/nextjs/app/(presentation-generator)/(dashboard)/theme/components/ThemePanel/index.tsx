@@ -22,7 +22,7 @@ import { ColorPickerComponent } from './ColorPickerComponent'
 import { FontCard } from './FontCard'
 import { ThemeCard } from './ThemeCard'
 
-import { toast } from 'sonner'
+import { notify } from '@/components/ui/sonner'
 import { Theme, ThemeParams } from '@/app/(presentation-generator)/services/api/types'
 import { ImagesApi } from '@/app/(presentation-generator)/services/api/images'
 import { Input } from '@/components/ui/input'
@@ -148,7 +148,10 @@ const ThemePanel: React.FC = () => {
         })
       } catch (error: any) {
         console.error('Failed to load custom themes', error)
-        toast.error(error?.message || 'Failed to load custom themes')
+        notify.error(
+          'Could not load themes',
+          error?.message || 'Your saved themes could not be loaded. Built-in themes are still available.'
+        )
       }
     }
     const loadUserFonts = async () => {
@@ -157,7 +160,10 @@ const ThemePanel: React.FC = () => {
         setUserFonts(userFonts)
       } catch (error: any) {
         console.error('Failed to load user fonts', error)
-        toast.error(error?.message || 'Failed to load user fonts')
+        notify.error(
+          'Could not load fonts',
+          error?.message || 'Your uploaded fonts could not be loaded right now.'
+        )
       }
     }
     loadUserFonts()
@@ -312,7 +318,10 @@ const ThemePanel: React.FC = () => {
       })
     } catch (error: any) {
       console.error('Failed to upload logo', error)
-      toast.error(error?.message || 'Failed to upload logo')
+      notify.error(
+        'Could not upload logo',
+        error?.message || 'Something went wrong while uploading your logo. Please try again.'
+      )
     } finally {
       setIsLogoUploading(false)
     }
@@ -454,10 +463,13 @@ const ThemePanel: React.FC = () => {
             has_logo: Boolean(updated.logo_url),
             font_name: updated.data?.fonts?.textFont?.name || "",
           })
-          toast.success('Theme updated')
+          notify.success('Theme updated', 'Your theme changes were saved.')
         } catch (error: any) {
           console.error('Failed to update theme', error)
-          toast.error(error?.message || 'Failed to update theme')
+          notify.error(
+            'Could not update theme',
+            error?.message || 'Something went wrong while saving your theme changes.'
+          )
         }
       })()
       return
@@ -495,10 +507,13 @@ const ThemePanel: React.FC = () => {
         has_logo: Boolean(created.logo_url),
         font_name: created.data?.fonts?.textFont?.name || "",
       })
-      toast.success('Theme saved')
+      notify.success('Theme saved', 'Your new theme was created and is ready to use.')
     } catch (error: any) {
       console.error('Failed to save theme', error)
-      toast.error(error?.message || 'Failed to save theme')
+      notify.error(
+        'Could not save theme',
+        error?.message || 'Something went wrong while creating your theme.'
+      )
     }
   }
 
@@ -506,13 +521,21 @@ const ThemePanel: React.FC = () => {
     setShowColorPicker(null)
   }
   const handleDelete = async (themeId: string) => {
-    await ThemeApi.deleteTheme(themeId)
-    setCustomThemes(customThemes.filter(theme => theme.id !== themeId))
-    trackEvent(MixpanelEvent.Theme_Deleted, {
-      pathname,
-      theme_id: themeId,
-    })
-    toast.success("Theme deleted successfully")
+    try {
+      await ThemeApi.deleteTheme(themeId)
+      setCustomThemes(customThemes.filter(theme => theme.id !== themeId))
+      trackEvent(MixpanelEvent.Theme_Deleted, {
+        pathname,
+        theme_id: themeId,
+      })
+      notify.success("Theme deleted", "The theme was removed from your library.")
+    } catch (error: any) {
+      console.error('Failed to delete theme', error)
+      notify.error(
+        'Could not delete theme',
+        error?.message || 'Something went wrong while deleting the theme.'
+      )
+    }
   }
   const handleCustomFontChange = async (fontFile: File) => {
     try {
@@ -543,10 +566,16 @@ const ThemePanel: React.FC = () => {
           fonts: [...prev.fonts, { name: font_name, url: font_url }]
         }))
       }
-      toast.success(`Font "${font_name}" uploaded successfully`)
+      notify.success(
+        'Font uploaded',
+        `Font "${font_name}" is now available for your themes.`
+      )
     } catch (error: any) {
       console.error('Failed to upload font', error)
-      toast.error(error?.message || 'Failed to upload font')
+      notify.error(
+        'Could not upload font',
+        error?.message || 'Something went wrong while uploading the font file.'
+      )
     } finally {
       setIsFontUploading(false)
     }

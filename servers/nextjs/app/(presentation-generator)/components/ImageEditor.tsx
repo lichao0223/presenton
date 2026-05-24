@@ -15,7 +15,7 @@ import { Wand2, Upload, Loader2, Delete, Trash, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PresentationGenerationApi } from "../services/api/presentation-generation";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { PreviousGeneratedImagesResponse } from "../services/api/params";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { ImagesApi } from "../services/api/images";
@@ -135,7 +135,7 @@ const ImageEditor = ({
         await PresentationGenerationApi.getPreviousGeneratedImages();
       setPreviousGeneratedImages(response);
     } catch (error: any) {
-      toast.error("Failed to get previous generated images. Please try again.");
+      notify.error("Could not load images", "Failed to get previous generated images. Please try again.");
       console.error("error in getting previous generated images", error);
       setError(
         error.message ||
@@ -321,7 +321,7 @@ const ImageEditor = ({
       setUploadedImageUrl(resolveEditorImageSource(result));
     } catch (err:any) {
       setUploadError("Failed to upload image. Please try again.");
-      toast.error(err.message || "Failed to upload image. Please try again.");
+      notify.error("Upload failed", err.message || "Failed to upload image. Please try again.");
       console.log("Upload error:", err.message);
     } finally {
       setIsUploading(false);
@@ -334,7 +334,7 @@ const ImageEditor = ({
       const result = await ImagesApi.getUploadedImages();
       setUploadedImages(result);
     } catch (err:any) {
-      toast.error(err.message || "Failed to get uploaded images. Please try again.");
+      notify.error("Could not load images", err.message || "Failed to get uploaded images. Please try again.");
       console.log("Get uploaded images error:", err.message);
     } finally {
       setUploadedImagesLoading(false);
@@ -348,11 +348,11 @@ const ImageEditor = ({
 
   const handleDeleteImage = async (image_id: string) => {
     try {
-      const result = await ImagesApi.deleteImage(image_id);
+      await ImagesApi.deleteImage(image_id);
       setUploadedImages(uploadedImages.filter((image) => image.id !== image_id));
-      toast.success(result.message || "Image deleted successfully");
+      notify.success("Image deleted", "The image was removed from your uploads.");
     } catch (err:any) {
-      toast.error(err.message || "Failed to delete image. Please try again.");
+      notify.error("Could not delete image", err.message || "Failed to delete image. Please try again.");
     }
   };
   return (

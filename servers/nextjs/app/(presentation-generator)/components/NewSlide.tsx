@@ -10,7 +10,7 @@ import { useDispatch } from "react-redux";
 import { addNewSlide } from "@/store/slices/presentationGeneration";
 import { Loader2, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { getCustomTemplateDetails } from "@/app/hooks/useCustomTemplates";
 import { getTemplatesByTemplateName } from "@/app/presentation-templates";
 
@@ -128,7 +128,7 @@ const NewSlideV1 = ({
         setShowNewSlideSelection(false);
       } catch (error: any) {
         console.error(error);
-        toast.error("Error adding new slide");
+        notify.error("Could not add slide", "Something went wrong while adding the new slide.");
       }
     },
     [

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { ApiResponseHandler } from "@/app/(presentation-generator)/services/api/api-error-handler";
 import { ProcessedSlide } from "../types";
 import { getHeader } from "@/app/(presentation-generator)/services/api/header";
@@ -32,7 +32,7 @@ export const useLayoutSaving = (
 
   const saveLayout = useCallback(async (layoutName: string, description: string, template_info_id: string): Promise<string | null> => {
     if (!slides.length) {
-      toast.error("No slides to save");
+      notify.error("No slides to save", "Add at least one slide before saving the layout.");
       return null;
     }
 
@@ -78,18 +78,22 @@ export const useLayoutSaving = (
         "Failed to save layout components"
       );
       if (!data) {
-        toast.error("Failed to save layout components");
+        notify.error(
+          "Could not save layout",
+          "Some layout components could not be saved. Please try again."
+        );
         return null;
       }
-
-      toast.success("Layout saved successfully");
 
       // Mark all slides as saved (remove modified flag)
       slides.forEach((slide) => {
         slide.modified = false;
       });
 
-      toast.success(`Layout "${layoutName}" saved successfully`);
+      notify.success(
+        "Layout saved",
+        `Layout "${layoutName}" was saved successfully.`
+      );
       trackEvent(MixpanelEvent.CustomTemplate_Saved, {
         template_info_id,
         saved_template_id: data.id,
@@ -101,12 +105,12 @@ export const useLayoutSaving = (
       return data.id;
     } catch (error) {
       console.error("Error saving layout:", error);
-      toast.error("Failed to save layout", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      });
+      notify.error(
+        "Failed to save layout",
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred"
+      );
       return null;
     } finally {
       setIsSavingLayout(false);

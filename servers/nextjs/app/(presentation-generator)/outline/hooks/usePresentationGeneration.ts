@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { usePathname, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { clearPresentationData } from "@/store/slices/presentationGeneration";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
 import { LoadingState, TABS } from "../types/index";
@@ -31,18 +31,18 @@ export const usePresentationGeneration = (
 
   const validateInputs = useCallback(() => {
     if (!outlines || outlines.length === 0) {
-      toast.error("No Outlines", {
-        description:
-          "Please wait for outlines to load before generating presentation",
-      });
+      notify.warning(
+        "Outlines not ready",
+        "Please wait for your outlines to finish generating before continuing."
+      );
       return false;
     }
 
     if (!selectedTemplate) {
-      toast.error("Select Layout Group", {
-        description:
-          "Please select a layout group before generating presentation",
-      });
+      notify.warning(
+        "Layout not selected",
+        "Choose a layout group before generating your presentation."
+      );
       return false;
     }
 
@@ -130,9 +130,7 @@ export const usePresentationGeneration = (
           !customTemplateDetail ||
           customTemplateDetail.layouts.length === 0
         ) {
-          toast.error("Template Error", {
-            description: "Failed to load custom template layouts",
-          });
+          notify.error("Template error", "Failed to load custom template layouts.");
           return;
         }
 
@@ -190,10 +188,10 @@ export const usePresentationGeneration = (
       }
     } catch (error: any) {
       console.error("Error In Presentation Generation(prepare).", error);
-      toast.error("Generation Error", {
-        description:
-          error.message || "Error In Presentation Generation(prepare).",
-      });
+      notify.error(
+        "Generation error",
+        error.message || "Error in presentation generation."
+      );
     } finally {
       setLoadingState(DEFAULT_LOADING_STATE);
     }

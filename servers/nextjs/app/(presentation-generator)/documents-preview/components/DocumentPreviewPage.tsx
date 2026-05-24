@@ -22,7 +22,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRouter, usePathname } from "next/navigation";
 import { RootState } from "@/store/store";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { getIconFromFile } from "../../utils/others";
 import { ChevronRight, PanelRightOpen, X } from "lucide-react";
 import ToolTip from "@/components/ToolTip";
@@ -131,7 +131,7 @@ const DocumentsPreviewPage: React.FC = () => {
         });
       } catch (error) {
         console.error("Error reading files:", error);
-        toast.error("Failed to read document content");
+        notify.error("Could not read document", "Failed to read document content.");
       }
       setDownloadingDocuments([]);
     }
@@ -170,9 +170,7 @@ const DocumentsPreviewPage: React.FC = () => {
       router.replace("/outline");
     } catch (error: any) {
       console.error("Error in radar presentation creation:", error);
-      toast.error("Error", {
-        description: error.message || "Error in radar presentation creation.",
-      });
+      notify.error("Creation failed", error.message || "Something went wrong while creating the presentation.");
       setShowLoading({
         message: "Error in radar presentation creation.",
         show: true,

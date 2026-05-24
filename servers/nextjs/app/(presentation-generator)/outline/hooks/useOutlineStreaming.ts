@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { setOutlines } from "@/store/slices/presentationGeneration";
 import { jsonrepair } from "jsonrepair";
 import { RootState } from "@/store/store";
@@ -94,7 +94,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
         } catch {
           if (!scheduleRetry("invalid SSE payload")) {
             resetStreamingState();
-            toast.error("Failed to parse outline stream response.");
+            notify.error("Stream parse failed", "Failed to parse outline stream response.");
           }
           return;
         }
@@ -161,7 +161,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
             } catch (error) {
               if (!scheduleRetry("failed to parse complete payload")) {
                 resetStreamingState();
-                toast.error("Failed to parse presentation data");
+                notify.error("Parse failed", "Failed to parse presentation data.");
               }
             }
             accumulatedChunks = "";
@@ -183,11 +183,11 @@ export const useOutlineStreaming = (presentationId: string | null) => {
             if (!scheduleRetry(data.detail || "server returned stream error")) {
               resetStreamingState();
               closeEventSource();
-              toast.error("Error in outline streaming", {
-                description:
-                  data.detail ||
-                  "Failed to connect to the server. Please try again.",
-              });
+              notify.error(
+                "Outline streaming failed",
+                data.detail ||
+                  "Failed to connect to the server. Please try again."
+              );
             }
             break;
         }
@@ -197,7 +197,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
         if (!scheduleRetry("connection lost")) {
           resetStreamingState();
           closeEventSource();
-          toast.error("Failed to connect to the server. Please try again.");
+          notify.error("Connection failed", "Failed to connect to the server. Please try again.");
         }
       };
     };

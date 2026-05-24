@@ -10,16 +10,6 @@ function Shimmer({ className }: { className?: string }) {
 export default function LoadingSettings() {
     return (
         <div className="h-screen font-syne flex flex-col overflow-hidden relative">
-            <div
-                className="fixed z-0 bottom-[-14.5rem] left-0 w-full h-full pointer-events-none"
-                style={{
-                    height: "341px",
-                    borderRadius: "1440px",
-                    background:
-                        "radial-gradient(5.92% 104.69% at 50% 100%, rgba(122, 90, 248, 0.00) 0%, rgba(255, 255, 255, 0.00) 100%), radial-gradient(50% 50% at 50% 50%, rgba(122, 90, 248, 0.80) 0%, rgba(122, 90, 248, 0.00) 100%)",
-                }}
-            />
-
             <main className="w-full mx-auto gap-6 overflow-hidden flex">
                 {/* SettingSideBar structure */}
                 <div className="w-full max-w-[230px] h-screen px-4 pt-[22px] bg-[#F9FAFB] flex flex-col shrink-0">

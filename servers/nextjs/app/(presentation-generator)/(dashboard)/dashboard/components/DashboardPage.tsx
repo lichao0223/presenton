@@ -10,24 +10,24 @@ import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { usePathname } from "next/navigation";
 
 const actionCardBase =
-  "absolute aspect-[16/9] h-[46.238px] w-[82.201px] rounded-[4.474px] border border-white/50 bg-cover bg-center bg-no-repeat shadow-[0_8px_18px_rgba(16,24,40,0.18)] transition-all duration-500 ease-out translate-y-12 scale-95 opacity-0 group-hover/action:translate-y-0 group-hover/action:scale-100 group-hover/action:opacity-100 group-focus-visible/action:translate-y-0 group-focus-visible/action:scale-100 group-focus-visible/action:opacity-100";
+  "absolute aspect-[16/9] h-[46.238px] w-[82.201px] rounded-[4.474px] border border-white/50 bg-cover bg-center bg-no-repeat shadow-[0_8px_18px_rgba(16,24,40,0.18)] transition-all duration-500 ease-out opacity-100 translate-y-0 scale-100";
 
 const FloatingActionCards = () => (
   <div className="pointer-events-none absolute right-[14px] top-[-36px] z-0 block h-[64px] w-[158px]">
     <div
-      className={`${actionCardBase} left-0 top-0  delay-75 border-none`}
+      className={`${actionCardBase} left-0 top-0 border-none group-hover/action:-translate-x-2 group-hover/action:-rotate-3 group-focus-visible/action:-translate-x-2 group-focus-visible/action:-rotate-3`}
       style={{
         backgroundImage: "url('/create_presentation_card_3.png')",
       }}
     />
     <div
-      className={`${actionCardBase} left-[39px] top-1 z-10  delay-150 border-none`}
+      className={`${actionCardBase} left-[39px] top-1 z-10 border-none group-hover/action:-translate-y-1 group-hover/action:scale-105 group-focus-visible/action:-translate-y-1 group-focus-visible/action:scale-105`}
       style={{
         backgroundImage: "url('/create_presentation_card_2.png')",
       }}
     />
     <div
-      className={`${actionCardBase} left-[76px] top-0  delay-200 border-none`}
+      className={`${actionCardBase} left-[76px] top-0 border-none group-hover/action:translate-x-2 group-hover/action:rotate-3 group-focus-visible/action:translate-x-2 group-focus-visible/action:rotate-3`}
       style={{
         backgroundImage: "url('/create_presentation_card_1.png')",
       }}
@@ -161,15 +161,6 @@ const DashboardPage: React.FC = () => {
           onPresentationDeleted={removePresentation}
         />
       </section>
-      <div
-        className="fixed z-0 bottom-[-16.5rem] left-0 w-full h-full"
-        style={{
-          height: "341px",
-          borderRadius: "1440px",
-          background:
-            "radial-gradient(5.92% 104.69% at 50% 100%, rgba(122, 90, 248, 0.00) 0%, rgba(255, 255, 255, 0.00) 100%), radial-gradient(50% 50% at 50% 50%, rgba(122, 90, 248, 0.80) 0%, rgba(122, 90, 248, 0.00) 100%)",
-        }}
-      />
     </div>
   );
 };

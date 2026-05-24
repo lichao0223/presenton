@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { handleSaveLLMConfig } from "@/utils/storeHelpers";
@@ -53,15 +52,6 @@ export default function Home() {
   return (
 
     <div className="flex min-h-screen relative">
-      <div
-        className="fixed z-0 -bottom-[14.5rem] left-0 w-full h-full pointer-events-none"
-        aria-hidden
-        style={{
-          height: "341px",
-          borderRadius: '1440px',
-          background: 'radial-gradient(5.92% 104.69% at 50% 100%, rgba(122, 90, 248, 0.00) 0%, rgba(255, 255, 255, 0.00) 100%), radial-gradient(50% 50% at 50% 50%, rgba(122, 90, 248, 0.80) 0%, rgba(122, 90, 248, 0.00) 100%)',
-        }}
-      />
       <OnBoardingSlidebar step={step} />
       <main className="w-full pl-20 pr-8 max-w-[1440px] mx-auto relative z-10">
 

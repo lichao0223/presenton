@@ -143,17 +143,17 @@ export function ConfigurationInitializer({ children }: { children: React.ReactNo
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#E9E8F8] via-[#F5F4FF] to-[#E0DFF7] flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-white p-4">
+        <div className="w-full max-w-md">
+          <div className="rounded-2xl border border-[#EDEEEF] bg-white p-8 text-center shadow-xl">
             {/* Logo/Branding */}
             <div className="mb-6">
               <img
                 src="/Logo.png"
                 alt="PresentOn"
-                className="h-12 mx-auto mb-4 opacity-90"
+                className="mx-auto mb-4 h-12 opacity-90"
               />
-              <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
+              <div className="mx-auto h-1 w-16 rounded-full bg-[#7C51F8]" />
             </div>
 
             {/* Loading Text */}

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { LLMConfig } from '@/types/llm_config';
 import { RootState } from '@/store/store';
 import { useSelector } from 'react-redux';
-import { toast } from 'sonner';
+import { notify } from '@/components/ui/sonner';
 import ToolTip from '../ToolTip';
 import { Switch } from '../ui/switch';
 import { Select, SelectItem, SelectContent, SelectValue, SelectTrigger } from '../ui/select';
@@ -328,11 +328,11 @@ const PresentonMode = ({ currentStep, setStep }: { currentStep: number, setStep:
                 console.error('Failed to fetch models');
                 setAvailableModels([]);
                 setModelsChecked(true);
-                toast.error(`Failed to fetch ${LLM_PROVIDERS[llmConfig.LLM!]?.label} models`);
+                notify.error("Could not load models", `The server could not list ${LLM_PROVIDERS[llmConfig.LLM!]?.label} models. Check your API key or endpoint and try again.`);
             }
         } catch (error) {
             console.error('Error fetching models:', error);
-            toast.error('Error fetching models');
+            notify.error("Could not load models", "The server could not list models. Check your API key or endpoint and try again.");
             setAvailableModels([]);
             setModelsChecked(true);
         } finally {
@@ -430,13 +430,13 @@ const PresentonMode = ({ currentStep, setStep }: { currentStep: number, setStep:
             if (llmConfig.LLM === 'codex') {
                 const isAuthenticated = await checkCurrentAuthStatus();
                 if (!isAuthenticated) {
-                    toast.error("Please sign in to ChatGPT to continue");
+                    notify.error("Sign in required", "Please sign in to ChatGPT to continue.");
                     return;
                 }
             }
             const validationError = getLLMConfigValidationError(llmConfig);
             if (validationError) {
-                toast.error("Cannot save configuration", { description: validationError });
+                notify.warning("Cannot save yet", validationError);
                 return;
             }
             setSavingConfig(true);
@@ -470,11 +470,11 @@ const PresentonMode = ({ currentStep, setStep }: { currentStep: number, setStep:
                 image_quality: imageGenerationEnabled ? getSelectedImageQuality(llmConfig) : ''
             });
 
-            toast.info("Configuration saved successfully");
+            notify.success("Configuration saved", "Your configuration was saved successfully.");
             setStep(3)
             // router.push("/upload");
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Failed to save configuration");
+            notify.error("Could not save configuration", error instanceof Error ? error.message : "Failed to save configuration");
 
         }
         finally {

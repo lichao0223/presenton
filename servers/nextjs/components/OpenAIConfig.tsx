@@ -12,7 +12,7 @@ import {
 } from "./ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { Switch } from "./ui/switch";
 import { LLMConfig } from "@/types/llm_config";
 import { getApiUrl } from "@/utils/api";
@@ -80,7 +80,7 @@ const isImageGenerationDisabled = llmConfig?.DISABLE_IMAGE_GENERATION ?? false;
       }
     } catch (error) {
       console.error('Error fetching models:', error);
-      toast.error('Error fetching models');
+      notify.error("Could not load models", "The server could not list models. Check your API key or endpoint and try again.");
       setAvailableModels([]);
       setModelsChecked(true);
     } finally {

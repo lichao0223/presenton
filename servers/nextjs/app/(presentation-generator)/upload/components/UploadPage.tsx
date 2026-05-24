@@ -19,7 +19,7 @@ import { LanguageType, PresentationConfig, ToneType, VerbosityType } from "../ty
 import SupportingDoc from "./SupportingDoc";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
 import { OverlayLoader } from "@/components/ui/overlay-loader";
 import Wrapper from "@/components/Wrapper";
@@ -205,7 +205,8 @@ const UploadPage = () => {
       });
       return true;
     } catch (error: any) {
-      toast.error(
+      notify.error(
+        "Image provider unavailable",
         error?.message ||
         `Unable to reach ${selectedProvider} right now. Please check your API key/settings and try again.`
       );
@@ -220,19 +221,19 @@ const UploadPage = () => {
   const validateConfiguration = (): boolean => {
     if (!config.language) {
       trackUploadValidationFailure("language_missing");
-      toast.error("Please select language");
+      notify.warning("Language required", "Please select a language.");
       return false;
     }
 
     if (files.length > 0 && config.language === LanguageType.Auto) {
       trackUploadValidationFailure("language_auto_with_documents");
-      toast.error("Please choose a language before processing uploaded documents");
+      notify.warning("Language required", "Please choose a language before processing uploaded documents.");
       return false;
     }
 
     if (!config.prompt.trim() && files.length === 0) {
       trackUploadValidationFailure("prompt_or_document_missing");
-      toast.error("No Prompt or Document Provided");
+      notify.warning("Input required", "Provide a prompt or upload at least one document.");
       return false;
     }
     return true;
@@ -362,9 +363,10 @@ const UploadPage = () => {
       duration: 0,
       showProgress: false,
     });
-    toast.error("Error", {
-      description: error.message || "Error in upload page.",
-    });
+    notify.error(
+      "Generation failed",
+      error.message || "Something went wrong while starting your presentation."
+    );
   };
 
   return (

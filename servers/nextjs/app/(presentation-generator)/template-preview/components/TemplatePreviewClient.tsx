@@ -9,7 +9,7 @@ import "../../utils/prism-languages";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
 import TemplateService from "../../services/api/template";
 import Header from "../../(dashboard)/dashboard/components/Header";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { CustomTemplateLayout, useCustomTemplateDetails } from "@/app/hooks/useCustomTemplates";
 import { templates as templateGroups, getTemplatesByTemplateName } from "@/app/presentation-templates";
 import { setupImageUrlConverter } from "@/utils/image-url-converter";
@@ -60,10 +60,10 @@ const GroupLayoutPreview = () => {
 
     const success = await TemplateService.deleteCustomTemplate(customTemplateId);
     if (success.success) {
-      toast.success("Template deleted successfully");
+      notify.success("Template deleted", "The template was deleted successfully.");
       router.push("/templates");
     } else {
-      toast.error("Failed to delete template");
+      notify.error("Could not delete template", "Something went wrong while deleting the template.");
     }
   };
 

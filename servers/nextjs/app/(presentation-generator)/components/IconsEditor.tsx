@@ -24,7 +24,7 @@ import type { RootState } from "@/store/store";
 import { setPresentationData } from "@/store/slices/presentationGeneration";
 import { useDispatch, useSelector } from "react-redux";
 import { PresentationGenerationApi } from "../services/api/presentation-generation";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 
 const ICON_WEIGHTS = [
   "thin",
@@ -232,7 +232,8 @@ const IconsEditor = ({
       } catch (error: any) {
         if (requestIdRef.current === requestId) {
           console.error("Error fetching icons:", error);
-          toast.error(
+          notify.error(
+            "Could not load icons",
             error.message || "Failed to fetch icons. Please try again."
           );
           setIcons([]);
@@ -265,7 +266,7 @@ const IconsEditor = ({
     );
 
     if (!replacementIcon) {
-      toast.error("Select an icon before replacing.");
+      notify.warning("Icon required", "Select an icon before replacing.");
       return;
     }
 

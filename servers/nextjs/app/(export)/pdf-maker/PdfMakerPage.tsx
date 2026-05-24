@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import "@/app/(presentation-generator)/utils/prism-languages";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
@@ -148,7 +148,7 @@ const PresentationPage = ({ presentation_id, exportCookie }: PresentationPagePro
       }
     } catch (error) {
       setError(true);
-      toast.error("Failed to load presentation");
+      notify.error("Failed to load presentation", "The presentation could not be loaded. Please try again.");
       console.error("Error fetching user slides:", error);
     } finally {
       setContentLoading(false);

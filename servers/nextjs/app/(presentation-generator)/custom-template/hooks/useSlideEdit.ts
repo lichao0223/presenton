@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ProcessedSlide } from "../types";
 import { getHeader } from "@/app/(presentation-generator)/services/api/header";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { getApiUrl } from "@/utils/api";
 
 export const useSlideEdit = (
@@ -64,9 +64,9 @@ export const useSlideEdit = (
       return true;
     } catch (error) {
       console.error("Error updating slide:", error);
-      toast.error(
-        `Error updating slide: ${error instanceof Error ? error.message : "Unknown error"
-        }`
+      notify.error(
+        "Could not update slide",
+        error instanceof Error ? error.message : "Unknown error"
       );
       return false;
     } finally {

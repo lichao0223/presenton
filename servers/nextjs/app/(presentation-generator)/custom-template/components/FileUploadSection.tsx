@@ -41,15 +41,6 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
 
       <div className=" max-w-[650px] w-full mx-auto px-2 md:px-0 ">
 
-        <div
-          className='absolute z-0 md:-bottom-[36%] -bottom-[40%] left-0 w-full h-full'
-          style={{
-            height: "341px",
-            borderRadius: '1440px',
-            background: 'radial-gradient(5.92% 104.69% at 50% 100%, rgba(122, 90, 248, 0.00) 0%, rgba(255, 255, 255, 0.00) 100%), radial-gradient(50% 50% at 50% 50%, rgba(122, 90, 248, 0.80) 0%, rgba(122, 90, 248, 0.00) 100%)',
-          }}
-        />
-
         <div className=' w-max ml-9  rounded-tl-[28px] rounded-tr-[28px] flex items-center bg-[#FAFAFF]  px-2.5 pt-2.5 pb-1'
           style={{
             boxShadow: '0 0 16px 0 rgba(80, 71, 230, 0.12)',

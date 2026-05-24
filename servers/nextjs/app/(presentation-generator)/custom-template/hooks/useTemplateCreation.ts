@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { getHeader, getHeaderForFormData } from "@/app/(presentation-generator)/services/api/header";
 import { ApiResponseHandler } from "@/app/(presentation-generator)/services/api/api-error-handler";
 import {
@@ -84,7 +84,7 @@ export const useTemplateCreation = () => {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Font check failed";
             updateState({ error: errorMessage, isLoading: false });
-            toast.error("Font Check Failed", { description: errorMessage });
+            notify.error("Font check failed", errorMessage);
             return null;
         }
     }, [updateState]);
@@ -94,7 +94,7 @@ export const useTemplateCreation = () => {
         // Check if font is already added
         const existingFont = uploadedFonts.find((f) => f.fontName === fontName);
         if (existingFont) {
-            toast.info(`Font "${fontName}" is already added`);
+            notify.warning("Font already added", `Font "${fontName}" is already in your upload list.`);
             return fontName;
         }
 
@@ -103,14 +103,14 @@ export const useTemplateCreation = () => {
         const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
 
         if (!validExtensions.includes(fileExtension)) {
-            toast.error("Invalid font file type. Please upload .ttf, .otf, .woff, .woff2, or .eot files");
+            notify.error("Invalid font file", "Please upload .ttf, .otf, .woff, .woff2, or .eot files.");
             return null;
         }
 
         // Validate file size (10MB limit)
         const maxSize = 10 * 1024 * 1024;
         if (file.size > maxSize) {
-            toast.error("Font file size must be less than 10MB");
+            notify.error("File too large", "Font file size must be less than 10MB.");
             return null;
         }
 
@@ -123,14 +123,14 @@ export const useTemplateCreation = () => {
         };
 
         setUploadedFonts(prev => [...prev, newFont]);
-        toast.success(`Font "${fontName}" added`);
+        notify.success("Font added", `Font "${fontName}" was added successfully.`);
         return fontName;
     }, [uploadedFonts]);
 
     // Remove a font
     const removeFont = useCallback((fontName: string) => {
         setUploadedFonts(prev => prev.filter(font => font.fontName !== fontName));
-        toast.info("Font removed");
+        notify.info("Font removed", "The font was removed from your upload list.");
     }, []);
 
     // Get all unsupported fonts that need upload
@@ -184,12 +184,12 @@ export const useTemplateCreation = () => {
                 isLoading: false
             });
 
-            toast.success("Slides preview generated successfully");
+            notify.success("Preview generated", "Slides preview was generated successfully.");
             return data;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Preview generation failed";
             updateState({ error: errorMessage, isLoading: false });
-            toast.error("Preview Failed", { description: errorMessage });
+            notify.error("Preview failed", errorMessage);
             return null;
         }
     }, [uploadedFonts, updateState]);
@@ -197,7 +197,7 @@ export const useTemplateCreation = () => {
     // Step 3: Initialize template creation
     const initTemplateCreation = useCallback(async (): Promise<string | null> => {
         if (!state.previewData) {
-            toast.error("No preview data available");
+            notify.error("No preview data", "Generate a preview before continuing.");
             return null;
         }
 
@@ -242,7 +242,7 @@ export const useTemplateCreation = () => {
                 uploaded_font_count: state.previewData.fonts?.length || 0,
             });
 
-            toast.success("Template creation initialized");
+            notify.success("Template initialized", "Template creation was initialized successfully.");
 
             // Automatically start processing the first slide
             if (typeof data === 'string') {
@@ -255,7 +255,7 @@ export const useTemplateCreation = () => {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Initialization failed";
             updateState({ error: errorMessage, isLoading: false });
-            toast.error("Initialization Failed", { description: errorMessage });
+            notify.error("Initialization failed", errorMessage);
             // reset the state
             reset();
             return null;
@@ -367,12 +367,24 @@ export const useTemplateCreation = () => {
                                 processed_slides: newSlides.filter(s => s.processed).length,
                                 failed_slides: newSlides.filter(s => Boolean(s.error)).length,
                             });
-                            toast.success("All slides processed successfully!");
+                            const failedCount = newSlides.filter(s => Boolean(s.error)).length;
+                            const processedCount = newSlides.filter(s => s.processed).length;
+                            if (failedCount > 0) {
+                                notify.warning(
+                                    "Some slides could not be processed",
+                                    `${processedCount} of ${newSlides.length} slides were reconstructed. ${failedCount} slide(s) failed — review them and try again.`
+                                );
+                            } else {
+                                notify.success(
+                                    "All slides processed",
+                                    "Every slide was reconstructed successfully."
+                                );
+                            }
                         }
                     }
                 } else {
                     // Single slide reconstruction - just show success
-                    toast.success(`Slide ${slideIndex + 1} reconstructed successfully`);
+                    notify.success("Slide reconstructed", `Slide ${slideIndex + 1} was reconstructed successfully.`);
                 }
 
                 return newSlides;
@@ -419,14 +431,14 @@ export const useTemplateCreation = () => {
                     .replace(TEMPLATE_VISION_MODEL_MARKER, "")
                     .trim()
                     .replace(/^\n+/, "");
-                toast.error("Vision-capable text model required", {
-                    description:
-                        description ||
+                notify.error(
+                    "Vision-capable text model required",
+                    description ||
                         "Choose a text model that accepts images in Settings, save, and try again.",
-                    duration: 12_000,
-                });
+                    { duration: 12_000 }
+                );
             } else {
-                toast.error(`Slide ${slideIndex + 1} failed`, { description: errorMessage });
+                notify.error(`Slide ${slideIndex + 1} failed`, errorMessage);
             }
             return null;
         }

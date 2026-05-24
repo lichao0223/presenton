@@ -8,7 +8,7 @@ import {
   type PresentationData,
 } from "@/store/slices/presentationGeneration";
 import { jsonrepair } from "jsonrepair";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
 import { getApiUrl, normalizeBackendAssetUrls } from "@/utils/api";
 import { store } from "@/store/store";
@@ -149,7 +149,7 @@ export const usePresentationStreaming = (
       setLoading(false);
       dispatch(setStreaming(false));
       setError(true);
-      toast.error("Presentation streaming failed", { description });
+      notify.error("Presentation streaming failed", description);
     };
 
     const scheduleRetry = (reason: string): boolean => {

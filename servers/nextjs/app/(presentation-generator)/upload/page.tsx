@@ -63,16 +63,6 @@ const page = () => {
         <p className="text-xl  font-syne text-[#101323CC]">Turn prompts or documents into presentations with AI</p>
       </div>
 
-      <div
-        className="fixed z-0 -bottom-[14.5rem] left-0 w-full h-full pointer-events-none"
-        aria-hidden
-        style={{
-          height: "341px",
-          borderRadius: '1440px',
-          background: 'radial-gradient(5.92% 104.69% at 50% 100%, rgba(122, 90, 248, 0.00) 0%, rgba(255, 255, 255, 0.00) 100%), radial-gradient(50% 50% at 50% 50%, rgba(122, 90, 248, 0.80) 0%, rgba(122, 90, 248, 0.00) 100%)',
-        }}
-      />
-
       <UploadPage />
     </div>
   );

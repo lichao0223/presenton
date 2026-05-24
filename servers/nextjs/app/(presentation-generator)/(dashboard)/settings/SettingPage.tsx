@@ -23,7 +23,6 @@ import PrivacySettings from "./PrivacySettings";
 import { IMAGE_PROVIDERS, LLM_PROVIDERS } from "@/utils/providerConstants";
 import { ImagesApi } from "@/app/(presentation-generator)/services/api/images";
 import { getApiUrl } from "@/utils/api";
-import { toast } from "sonner";
 import LogoutButton from "@/components/Auth/LogoutButton";
 
 const STOCK_IMAGE_PROVIDERS = new Set(["pexels", "pixabay"]);
@@ -132,7 +131,7 @@ const SettingsPage = () => {
     if (llmConfig.LLM === 'codex') {
       const isAuthenticated = await checkCurrentAuthStatus();
       if (!isAuthenticated) {
-        toast.error("Please sign in to ChatGPT to continue");
+        notify.error("Sign in required", "Please sign in to ChatGPT to continue.");
         return;
       }
     }
@@ -141,7 +140,7 @@ const SettingsPage = () => {
     });
     const validationError = getLLMConfigValidationError(llmConfig);
     if (validationError) {
-      notify.error("Cannot save settings", validationError);
+      notify.warning("Cannot save settings", validationError);
       if (
         selectedProvider === "image-provider" &&
         llmConfig.LLM === "openai" &&
@@ -166,6 +165,7 @@ const SettingsPage = () => {
       }));
       trackEvent(MixpanelEvent.Settings_SaveConfiguration_API_Call);
       await handleSaveLLMConfig(llmConfig);
+      let ollamaModelDownloaded = false;
       if (llmConfig.LLM === "ollama" && llmConfig.OLLAMA_MODEL) {
         trackEvent(MixpanelEvent.Settings_CheckOllamaModelPulled_API_Call);
         const isPulled = await checkIfSelectedOllamaModelIsPulled(
@@ -185,11 +185,14 @@ const SettingsPage = () => {
           if (downloadOutcome === "cancelled") {
             return;
           }
+          ollamaModelDownloaded = downloadOutcome === "completed";
         }
       }
       notify.success(
-        "Settings saved",
-        "Your configuration was saved successfully."
+        ollamaModelDownloaded ? "Settings saved and model ready" : "Settings saved",
+        ollamaModelDownloaded
+          ? "Your configuration was saved and the Ollama model finished downloading."
+          : "Your configuration was saved successfully."
       );
       setButtonState((prev) => ({
         ...prev,
@@ -270,10 +273,6 @@ const SettingsPage = () => {
       setTimeout(() => {
         setShowDownloadModal(false);
         setDownloadingModel(null);
-        notify.success(
-          "Model ready",
-          "The Ollama model finished downloading successfully."
-        );
       }, 2000);
     }
   }, [downloadingModel]);
@@ -413,16 +412,6 @@ const SettingsPage = () => {
 
   return (
     <div className="h-screen font-syne flex flex-col overflow-hidden relative">
-      <div
-        className="fixed z-0 bottom-[-14.5rem] left-0 w-full h-full"
-        style={{
-          height: "341px",
-          borderRadius: "1440px",
-          background:
-            "radial-gradient(5.92% 104.69% at 50% 100%, rgba(122, 90, 248, 0.00) 0%, rgba(255, 255, 255, 0.00) 100%), radial-gradient(50% 50% at 50% 50%, rgba(122, 90, 248, 0.80) 0%, rgba(122, 90, 248, 0.00) 100%)",
-        }}
-      />
-
       <main className="w-full mx-auto gap-6   overflow-hidden flex ">
         <SettingSideBar
           mode={mode}

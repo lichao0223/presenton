@@ -8,7 +8,7 @@ import { Save, X, ChevronDown, ChevronRight, Type, Hash, List, Box, AlertCircle,
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProcessedSlide } from "../types";
 import { CompiledLayout } from "@/app/hooks/compileLayout";
-import { toast } from "sonner";
+import { notify } from "@/components/ui/sonner";
 import * as parser from "@babel/parser";
 import traverse from "@babel/traverse";
 import generate from "@babel/generator";
@@ -831,11 +831,11 @@ export const SchemaEditor: React.FC<SchemaEditorProps> = ({
                 normal: 'Medium',
                 max: 'Text Heavy',
             };
-            toast.success(`${modeLabels[mode]} content generated!`);
+            notify.success("Content generated", `${modeLabels[mode]} content was generated successfully.`);
             handleCancel();
         } catch (error) {
             console.error('Error generating content:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to generate content');
+            notify.error("Generation failed", error instanceof Error ? error.message : "Failed to generate content.");
         } finally {
             setIsGenerating(false);
             setGeneratingMode(null);
