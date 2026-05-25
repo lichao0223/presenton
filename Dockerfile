@@ -87,10 +87,11 @@ ENV APP_DATA_DIRECTORY=/app_data \
     PRESENTON_FASTEMBED_ICON_CACHE_DIR=/root/.cache/presenton/fastembed-icons \
     PATH="/opt/venv/bin:${PATH}" \
     NODE_ENV=production \
-    START_OLLAMA=false
+    START_OLLAMA=false \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 RUN set -eux; \
-    packages="ca-certificates curl nginx fontconfig imagemagick zstd \
+    packages="ca-certificates curl nginx fontconfig imagemagick zstd chromium \
       fonts-liberation xdg-utils \
       libasound2t64 libatk-bridge2.0-0t64 libatk1.0-0t64 libatspi2.0-0t64 \
       libcairo2 libcups2t64 libdbus-1-3 libdrm2 libexpat1 libgbm1 \

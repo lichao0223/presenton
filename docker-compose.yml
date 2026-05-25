@@ -12,6 +12,7 @@ services:
     volumes:
       - ./app_data:/app_data
     environment:
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
       - MIGRATE_DATABASE_ON_STARTUP=true
       - CAN_CHANGE_KEYS=${CAN_CHANGE_KEYS}
       - LLM=${LLM}
@@ -113,6 +114,7 @@ services:
     volumes:
       - ./app_data:/app_data
     environment:
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
       - MIGRATE_DATABASE_ON_STARTUP=true
       - CAN_CHANGE_KEYS=${CAN_CHANGE_KEYS}
       - LLM=${LLM}
@@ -208,6 +210,8 @@ services:
       - presenton_document_extraction_liteparse:/app/document-extraction-liteparse
       - ./app_data:/app_data
     environment:
+      # Bundled PPTX/PDF export (Puppeteer); matches CI and production image.
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
       # Ollama is not baked into the image; set START_OLLAMA=true for runtime install, or use OLLAMA_URL.
       - START_OLLAMA=${START_OLLAMA:-false}
       - MIGRATE_DATABASE_ON_STARTUP=true
@@ -311,6 +315,7 @@ services:
       - presenton_document_extraction_liteparse:/app/document-extraction-liteparse
       - ./app_data:/app_data
     environment:
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
       - START_OLLAMA=${START_OLLAMA:-false}
       - MIGRATE_DATABASE_ON_STARTUP=true
       - CAN_CHANGE_KEYS=${CAN_CHANGE_KEYS}
