@@ -82,9 +82,6 @@ async def update_files(
     file: Annotated[UploadFile, File()],
 ):
     validate_files(file, False, False, 100, UPLOAD_ACCEPTED_FILE_TYPES)
-
-    resolved_file_path = TEMP_FILE_SERVICE.resolve_temp_path(file_path, must_exist=True)
-    with open(resolved_file_path, "wb") as f:
-        f.write(await file.read())
+    await TEMP_FILE_SERVICE.update_temp_file_from_upload(file_path, file)
 
     return {"message": "File updated successfully"}

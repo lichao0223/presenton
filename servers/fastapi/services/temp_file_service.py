@@ -19,10 +19,11 @@ class TempFileService:
 
     def _is_within_base_dir(self, path: str) -> bool:
         base_dir = self._base_dir_realpath()
-        try:
-            return os.path.commonpath([base_dir, path]) == base_dir
-        except ValueError:
-            return False
+        return path == base_dir or path.startswith(f"{base_dir}{os.sep}")
+
+    def _assert_within_base_dir(self, path: str, detail: str):
+        if not self._is_within_base_dir(path):
+            raise HTTPException(status_code=400, detail=detail)
 
     def sanitize_upload_filename(self, file_name: Optional[str]) -> str:
         normalized_name = (file_name or "").replace("\\", "/")
@@ -36,8 +37,26 @@ class TempFileService:
             raise HTTPException(status_code=400, detail="Invalid file path")
 
         normalized_path = os.path.abspath(file_path)
-        resolved_path = os.path.realpath(normalized_path)
-        if not self._is_within_base_dir(resolved_path):
+        base_dir = self._base_dir_realpath()
+        if not (
+            normalized_path == base_dir
+            or normalized_path.startswith(f"{base_dir}{os.sep}")
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="File path must stay within the temp directory",
+            )
+
+        try:
+            resolved_path = os.path.realpath(normalized_path)
+        except OSError as exc:
+            raise HTTPException(status_code=404, detail="File not found") from exc
+
+        base_dir = self._base_dir_realpath()
+        if not (
+            resolved_path == base_dir
+            or resolved_path.startswith(f"{base_dir}{os.sep}")
+        ):
             raise HTTPException(
                 status_code=400,
                 detail="File path must stay within the temp directory",
@@ -61,11 +80,9 @@ class TempFileService:
         )
         temp_dir = os.path.join(base_dir, temp_dir_name)
         temp_dir = os.path.realpath(temp_dir)
-        if not self._is_within_base_dir(temp_dir):
-            raise HTTPException(
-                status_code=400,
-                detail="Directory path must stay within the temp directory",
-            )
+        self._assert_within_base_dir(
+            temp_dir, "Directory path must stay within the temp directory"
+        )
         os.makedirs(temp_dir, exist_ok=True)
         return temp_dir
 
@@ -80,19 +97,15 @@ class TempFileService:
 
         safe_name = self.sanitize_upload_filename(file_path)
         resolved_dir = os.path.realpath(dir_path)
-        if not self._is_within_base_dir(resolved_dir):
-            raise HTTPException(
-                status_code=400,
-                detail="Directory path must stay within the temp directory",
-            )
+        self._assert_within_base_dir(
+            resolved_dir, "Directory path must stay within the temp directory"
+        )
 
         full_path = os.path.join(resolved_dir, safe_name)
         full_path = os.path.realpath(full_path)
-        if not self._is_within_base_dir(full_path):
-            raise HTTPException(
-                status_code=400,
-                detail="File path must stay within the temp directory",
-            )
+        self._assert_within_base_dir(
+            full_path, "File path must stay within the temp directory"
+        )
 
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         return full_path
@@ -112,14 +125,34 @@ class TempFileService:
 
     def read_temp_file(self, file_path: str, binary: bool = True) -> Union[bytes, str]:
         file_path = self.resolve_temp_path(file_path, must_exist=True)
+        base_dir = self._base_dir_realpath()
+        if not (file_path == base_dir or file_path.startswith(f"{base_dir}{os.sep}")):
+            raise HTTPException(
+                status_code=400,
+                detail="File path must stay within the temp directory",
+            )
         mode = "rb" if binary else "r"
         with open(file_path, mode) as f:
             return f.read()
 
-    def cleanup_temp_file(self, file_path: str):
-        if not os.path.exists(file_path):
-            return
+    async def update_temp_file_from_upload(self, file_path: str, upload_file) -> None:
         file_path = self.resolve_temp_path(file_path, must_exist=True)
+        base_dir = self._base_dir_realpath()
+        if not (file_path == base_dir or file_path.startswith(f"{base_dir}{os.sep}")):
+            raise HTTPException(
+                status_code=400,
+                detail="File path must stay within the temp directory",
+            )
+        with open(file_path, "wb") as f:
+            f.write(await upload_file.read())
+
+    def cleanup_temp_file(self, file_path: str):
+        try:
+            file_path = self.resolve_temp_path(file_path, must_exist=True)
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                return
+            raise
         os.remove(file_path)
 
     def _delete_dir_files(self, dir_path: str):
@@ -131,9 +164,12 @@ class TempFileService:
                 os.rmdir(os.path.join(root, name))
 
     def cleanup_temp_dir(self, dir_path: str):
-        if not os.path.exists(dir_path):
-            return
-        dir_path = self.resolve_temp_path(dir_path, must_exist=True)
+        try:
+            dir_path = self.resolve_temp_path(dir_path, must_exist=True)
+        except HTTPException as exc:
+            if exc.status_code == 404:
+                return
+            raise
         self._delete_dir_files(dir_path)
         os.rmdir(dir_path)
 

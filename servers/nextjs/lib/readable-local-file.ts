@@ -12,19 +12,13 @@ export class LocalFileAccessError extends Error {
   }
 }
 
-function isWithinBaseDir(candidatePath: string, baseDir: string): boolean {
-  const relativePath = path.relative(baseDir, candidatePath);
-  return (
-    relativePath === "" ||
-    (!relativePath.startsWith("..") && !path.isAbsolute(relativePath))
-  );
-}
-
 function resolveBaseDir(baseDir: string): string {
   const resolvedBaseDir = path.resolve(baseDir);
-  return fs.existsSync(resolvedBaseDir)
-    ? fs.realpathSync(resolvedBaseDir)
-    : resolvedBaseDir;
+  try {
+    return fs.realpathSync(resolvedBaseDir);
+  } catch {
+    return resolvedBaseDir;
+  }
 }
 
 function allowedReadableFileBaseDirs(): string[] {
@@ -36,24 +30,51 @@ function allowedReadableFileBaseDirs(): string[] {
   return [appDataDirectory, tempDirectory].map(resolveBaseDir);
 }
 
+function assertPathAllowed(candidatePath: string, baseDirs: string[]): void {
+  for (const baseDir of baseDirs) {
+    if (candidatePath === baseDir || candidatePath.startsWith(`${baseDir}${path.sep}`)) {
+      return;
+    }
+  }
+
+  throw new LocalFileAccessError("Access denied: File path not allowed", 403);
+}
+
 export function resolveReadableLocalFile(filePath: unknown): string {
   if (typeof filePath !== "string" || filePath.trim().length === 0) {
     throw new LocalFileAccessError("Invalid file path", 400);
   }
 
   const requestedPath = path.resolve(filePath);
-  if (!fs.existsSync(requestedPath)) {
+  const allowedBaseDirs = allowedReadableFileBaseDirs();
+  assertPathAllowed(requestedPath, allowedBaseDirs);
+
+  let resolvedPath: string;
+  try {
+    resolvedPath = fs.realpathSync(requestedPath);
+  } catch {
     throw new LocalFileAccessError("File not found", 404);
   }
 
-  const resolvedPath = fs.realpathSync(requestedPath);
-  const isPathAllowed = allowedReadableFileBaseDirs().some((baseDir) =>
-    isWithinBaseDir(resolvedPath, baseDir),
-  );
+  assertPathAllowed(resolvedPath, allowedBaseDirs);
+  return resolvedPath;
+}
+
+export function readReadableLocalFile(filePath: unknown): string {
+  const resolvedPath = resolveReadableLocalFile(filePath);
+  const allowedBaseDirs = allowedReadableFileBaseDirs();
+  let isPathAllowed = false;
+
+  for (const baseDir of allowedBaseDirs) {
+    if (resolvedPath === baseDir || resolvedPath.startsWith(`${baseDir}${path.sep}`)) {
+      isPathAllowed = true;
+      break;
+    }
+  }
 
   if (!isPathAllowed) {
     throw new LocalFileAccessError("Access denied: File path not allowed", 403);
   }
 
-  return resolvedPath;
+  return fs.readFileSync(resolvedPath, "utf-8");
 }

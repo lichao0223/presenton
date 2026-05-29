@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
 import {
   LocalFileAccessError,
-  resolveReadableLocalFile,
+  readReadableLocalFile,
 } from '@/lib/readable-local-file';
 
 export async function POST(request: Request) {
   try {
     const { filePath } = await request.json();
-    const resolvedPath = resolveReadableLocalFile(filePath);
-
-    const content = fs.readFileSync(resolvedPath, 'utf-8');
+    const content = readReadableLocalFile(filePath);
     return NextResponse.json({ content });
   } catch (error) {
     if (error instanceof LocalFileAccessError) {
