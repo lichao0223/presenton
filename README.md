@@ -48,6 +48,10 @@ What makes Presenton different?
   <img src="./readme_assets/images/features.png" alt="Presenton Features" />
 </p>
 
+<p align="center">
+  <img src="./readme_assets/images/chatgpt-2-1.png" alt="Create stunning presentations with your existing ChatGPT subscription — secure and private, instant access, no API keys" />
+</p>
+
 #
 
 ### 💻 Presenton Desktop
