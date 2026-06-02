@@ -1,6 +1,7 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { spawn } from "child_process";
 import {
   Browser,
   Cache,
@@ -155,10 +156,11 @@ async function materializeBundledChromiumForMsix(bundledExePath: string): Promis
   const destRevisionDir = path.join(cacheRoot, "chrome", revisionName);
   const destExe = path.join(destRevisionDir, path.basename(browserDir), path.basename(bundledExePath));
   const stampPath = path.join(cacheRoot, ".source-revision-dir");
+  const sourceStamp = `${revisionDir}\n${await getDirectoryMtimeFingerprint(revisionDir)}`;
 
-  if (fs.existsSync(destExe)) {
+  if (isMaterializedChromiumComplete(destExe)) {
     try {
-      if ((await fs.promises.readFile(stampPath, "utf8")).trim() === revisionDir) {
+      if ((await fs.promises.readFile(stampPath, "utf8")).trim() === sourceStamp.trim()) {
         return destExe;
       }
     } catch {
@@ -173,12 +175,91 @@ async function materializeBundledChromiumForMsix(bundledExePath: string): Promis
   await fs.promises.rm(cacheRoot, { recursive: true, force: true });
   await fs.promises.mkdir(path.dirname(destRevisionDir), { recursive: true });
   await fs.promises.cp(revisionDir, destRevisionDir, { recursive: true });
-  await fs.promises.writeFile(stampPath, revisionDir, "utf8");
+  await fs.promises.writeFile(stampPath, sourceStamp, "utf8");
 
-  if (!fs.existsSync(destExe)) {
+  if (!isMaterializedChromiumComplete(destExe)) {
     throw new Error(`Chrome executable missing after MSIX materialization: ${destExe}`);
   }
   return destExe;
+}
+
+function isMaterializedChromiumComplete(executablePath: string): boolean {
+  if (!fs.existsSync(executablePath)) {
+    return false;
+  }
+  if (process.platform !== "win32") {
+    return true;
+  }
+
+  const chromeDir = path.dirname(executablePath);
+  return ["chrome.dll", "icudtl.dat"].every((fileName) =>
+    fs.existsSync(path.join(chromeDir, fileName))
+  );
+}
+
+async function getDirectoryMtimeFingerprint(directory: string): Promise<string> {
+  let newestMtime = 0;
+  let fileCount = 0;
+  const visit = async (current: string) => {
+    const entries = await fs.promises.readdir(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        await visit(fullPath);
+        continue;
+      }
+      const stat = await fs.promises.stat(fullPath);
+      newestMtime = Math.max(newestMtime, stat.mtimeMs);
+      fileCount += 1;
+    }
+  };
+  await visit(directory);
+  return `${fileCount}:${newestMtime}`;
+}
+
+function verifyChromiumCanStart(executablePath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const probe = spawn(
+      executablePath,
+      [
+        "--headless=new",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+        "--no-sandbox",
+        "--no-first-run",
+        "--disable-extensions",
+        "about:blank",
+      ],
+      {
+        stdio: "ignore",
+        windowsHide: process.platform === "win32",
+      }
+    );
+
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      probe.kill();
+      resolve();
+    }, 3000);
+
+    probe.once("error", (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+    });
+
+    probe.once("exit", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      code === 0
+        ? resolve()
+        : reject(new Error(`Chrome probe exited with code ${code ?? "unknown"}`));
+    });
+  });
 }
 
 /**
@@ -197,7 +278,9 @@ export async function resolveLaunchableExportChromiumPath(): Promise<string | nu
   }
 
   try {
-    return await materializeBundledChromiumForMsix(installed);
+    const materializedPath = await materializeBundledChromiumForMsix(installed);
+    await verifyChromiumCanStart(materializedPath);
+    return materializedPath;
   } catch (error) {
     safeError("[Chromium] Failed to prepare Chrome for Microsoft Store export", error);
     return null;

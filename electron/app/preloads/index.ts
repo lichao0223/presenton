@@ -27,15 +27,27 @@ contextBridge.exposeInMainWorld('electron', {
   uploadImage: (file: Buffer) => ipcRenderer.invoke("upload-image", file),
   writeNextjsLog: (logData: string) => ipcRenderer.invoke("write-nextjs-log", logData),
   clearNextjsLogs: () => ipcRenderer.invoke("clear-nextjs-logs"),
+  checkLibreOffice: () => ipcRenderer.invoke("lo:check-installed"),
+  installLibreOffice: () => ipcRenderer.invoke("lo:start-install"),
+  cancelLibreOfficeInstall: () => ipcRenderer.invoke("lo:cancel-install"),
+  onLibreOfficeProgress: (
+    callback: (payload: { phase: string; percent?: number; message?: string }) => void
+  ) => {
+    const listener = (
+      _event: IpcRendererEvent,
+      payload: { phase: string; percent?: number; message?: string }
+    ) => callback(payload);
+    ipcRenderer.on("lo:progress", listener);
+    return () => ipcRenderer.removeListener("lo:progress", listener);
+  },
+  onLibreOfficeLog: (callback: (payload: { level: string; text: string }) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: { level: string; text: string }) =>
+      callback(payload);
+    ipcRenderer.on("lo:log", listener);
+    return () => ipcRenderer.removeListener("lo:log", listener);
+  },
   // API handlers
   hasRequiredKey: () => ipcRenderer.invoke("api:has-required-key"),
   telemetryStatus: () => ipcRenderer.invoke("api:telemetry-status"),
   getTemplates: () => ipcRenderer.invoke("api:templates"),
-  onStartupStatus: (callback: (payload: { name: string; status: string }) => void) => {
-    const listener = (_event: IpcRendererEvent, payload: { name: string; status: string }) =>
-      callback(payload);
-    ipcRenderer.on("startup:status", listener);
-    return () => ipcRenderer.removeListener("startup:status", listener);
-  },
-  getStartupStatus: () => ipcRenderer.invoke("startup:get-status"),
 });

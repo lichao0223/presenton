@@ -22,6 +22,32 @@ def _get_soffice_binary() -> str:
     configured = os.environ.get("SOFFICE_PATH")
     if configured:
         return configured
+    if os.name == "nt":
+        candidates: List[str] = []
+        for root in [
+            os.environ.get("ProgramFiles"),
+            os.environ.get("ProgramFiles(x86)"),
+            os.environ.get("LOCALAPPDATA"),
+            os.environ.get("APPDATA"),
+        ]:
+            if not root:
+                continue
+            candidates.extend(
+                [
+                    os.path.join(root, "LibreOffice", "program", "soffice.exe"),
+                    os.path.join(root, "Programs", "LibreOffice", "program", "soffice.exe"),
+                ]
+            )
+            try:
+                for entry in os.listdir(root):
+                    if entry.lower().startswith("libreoffice"):
+                        candidates.append(os.path.join(root, entry, "program", "soffice.exe"))
+            except OSError:
+                pass
+
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                return candidate
     return "soffice.exe" if os.name == "nt" else "soffice"
 
 

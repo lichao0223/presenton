@@ -546,7 +546,7 @@ def _extract_slide_xmls(pptx_path: str, temp_dir: str) -> List[str]:
 
 
 async def _convert_pptx_to_pdf(pptx_path: str, temp_dir: str) -> str:
-    """Generate PNG screenshots of PPTX slides using LibreOffice + ImageMagick."""
+    """Convert PPTX slides to PDF using LibreOffice before Python renders page images."""
     screenshots_dir = os.path.join(temp_dir, "screenshots")
     os.makedirs(screenshots_dir, exist_ok=True)
 

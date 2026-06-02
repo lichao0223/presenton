@@ -43,42 +43,41 @@ def _windows_hidden_subprocess_kwargs() -> Dict[str, object]:
 class DocumentConversionService:
     def __init__(self):
         self.soffice_binary = self._resolve_soffice_binary()
-        self.imagemagick_binary = self._resolve_imagemagick_binary()
 
     @staticmethod
     def _resolve_soffice_binary() -> str:
         configured = (os.getenv("SOFFICE_PATH") or "").strip()
         if configured:
             return configured
+        if os.name == "nt":
+            candidates: List[str] = []
+            for root in [
+                os.getenv("ProgramFiles"),
+                os.getenv("ProgramFiles(x86)"),
+                os.getenv("LOCALAPPDATA"),
+                os.getenv("APPDATA"),
+            ]:
+                if not root:
+                    continue
+                candidates.extend(
+                    [
+                        os.path.join(root, "LibreOffice", "program", "soffice.exe"),
+                        os.path.join(root, "Programs", "LibreOffice", "program", "soffice.exe"),
+                    ]
+                )
+                try:
+                    for entry in os.listdir(root):
+                        if entry.lower().startswith("libreoffice"):
+                            candidates.append(
+                                os.path.join(root, entry, "program", "soffice.exe")
+                            )
+                except OSError:
+                    pass
+
+            for candidate in candidates:
+                if os.path.exists(candidate):
+                    return candidate
         return "soffice.exe" if os.name == "nt" else "soffice"
-
-    @staticmethod
-    def _can_execute(command: str, args: List[str]) -> bool:
-        try:
-            result = subprocess.run(
-                [command, *args],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=10,
-                check=False,
-                **_windows_hidden_subprocess_kwargs(),
-            )
-            return result.returncode == 0
-        except Exception:
-            return False
-
-    def _resolve_imagemagick_binary(self) -> str:
-        configured = (os.getenv("IMAGEMAGICK_BINARY") or "").strip()
-        if configured:
-            return configured
-
-        for candidate in ["magick", "convert"]:
-            if self._can_execute(candidate, ["-version"]):
-                return candidate
-
-        return "magick" if os.name == "nt" else "convert"
 
     def convert_office_to_pdf(
         self,
@@ -168,74 +167,3 @@ class DocumentConversionService:
         raise DocumentConversionError(
             f"LibreOffice did not create a PDF for {os.path.basename(file_path)}"
         )
-
-    def convert_image_to_png(
-        self,
-        file_path: str,
-        output_dir: str,
-        timeout_seconds: int = 120,
-    ) -> str:
-        Path(output_dir).mkdir(parents=True, exist_ok=True)
-
-        output_path = Path(output_dir) / f"{Path(file_path).stem}_converted.png"
-
-        command = [self.imagemagick_binary, file_path, str(output_path)]
-
-        try:
-            LOGGER.info(
-                "[DocumentConversion] ImageMagick conversion start input=%s output=%s command=%s",
-                file_path,
-                output_path,
-                _command_str(command),
-            )
-            log_memory(LOGGER, "document_conversion.image.start", input=file_path)
-            subprocess.run(
-                command,
-                check=True,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=timeout_seconds,
-                **_windows_hidden_subprocess_kwargs(),
-            )
-            LOGGER.info(
-                "[DocumentConversion] ImageMagick conversion complete output=%s",
-                output_path,
-            )
-            log_memory(LOGGER, "document_conversion.image.finish", input=file_path)
-        except subprocess.TimeoutExpired as exc:
-            LOGGER.error(
-                "[DocumentConversion] ImageMagick timed out command=%s",
-                _command_str(exc.cmd if isinstance(exc.cmd, list) else [str(exc.cmd)]),
-            )
-            raise DocumentConversionError(
-                f"ImageMagick conversion timed out for {os.path.basename(file_path)}"
-            ) from exc
-        except subprocess.CalledProcessError as exc:
-            stderr = (exc.stderr or "").strip()
-            stdout = (exc.stdout or "").strip()
-            details = stderr or stdout or str(exc)
-            LOGGER.error(
-                "[DocumentConversion] ImageMagick failed code=%s command=%s stderr=%s stdout=%s",
-                exc.returncode,
-                _command_str(exc.cmd if isinstance(exc.cmd, list) else [str(exc.cmd)]),
-                _snippet(stderr),
-                _snippet(stdout),
-            )
-            raise DocumentConversionError(
-                f"ImageMagick conversion failed for {os.path.basename(file_path)}: {details} "
-                f"(stderr={_snippet(stderr)}; stdout={_snippet(stdout)})"
-            ) from exc
-        except Exception as exc:
-            LOGGER.exception("[DocumentConversion] ImageMagick conversion unexpected error")
-            raise DocumentConversionError(
-                f"ImageMagick conversion failed for {os.path.basename(file_path)}: {exc}"
-            ) from exc
-
-        if not output_path.is_file():
-            raise DocumentConversionError(
-                f"ImageMagick did not create a PNG for {os.path.basename(file_path)}"
-            )
-
-        return str(output_path)

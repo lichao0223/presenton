@@ -10,13 +10,18 @@ import {
   libreOfficeDownloadChain,
   type LibreOfficeDownloadPlatform,
 } from "../utils/libreoffice-urls";
-import { getLinuxInstallCommand } from "../utils/libreoffice-check";
+import {
+  getLinuxInstallCommand,
+  getSofficePath,
+  isLibreOfficeInstalled,
+} from "../utils/libreoffice-check";
 import { getTempDir } from "../utils/constants";
 import { destroyChildProcessStdio, safeSendToWebContents, terminateChildProcess } from "../utils/lifecycle";
 import { killProcess } from "../utils";
 
 const activeLibreOfficeInstallProcesses = new Set<ChildProcess>();
 const activeLibreOfficeDownloadAborters = new Set<() => void>();
+let libreOfficeInstallCancellationRequested = false;
 
 function trackLibreOfficeChild(child: ChildProcess): () => void {
   activeLibreOfficeInstallProcesses.add(child);
@@ -596,8 +601,25 @@ async function installLinux(wc: WebContents): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export function setupLibreOfficeInstallHandlers() {
+  ipcMain.handle("lo:check-installed", async () => {
+    const result = await isLibreOfficeInstalled();
+    if (result.installed && result.path) {
+      process.env.SOFFICE_PATH = result.path;
+      process.env.PRESENTON_OFFICE_RENDERER = "libreoffice";
+    }
+    return result;
+  });
+
+  ipcMain.handle("lo:cancel-install", async (event) => {
+    libreOfficeInstallCancellationRequested = true;
+    await stopActiveLibreOfficeInstallProcesses();
+    sendProgress(event.sender, "error", undefined, "LibreOffice installation cancelled.");
+    return { ok: true };
+  });
+
   ipcMain.handle("lo:start-install", async (event) => {
     const wc = event.sender;
+    libreOfficeInstallCancellationRequested = false;
     const onDestroyed = () => {
       void stopActiveLibreOfficeInstallProcesses();
     };
@@ -612,15 +634,31 @@ export function setupLibreOfficeInstallHandlers() {
       } else {
         await installLinux(wc);
       }
-      sendProgress(wc, "done");
+      const result = await isLibreOfficeInstalled();
+      if (!result.installed) {
+        throw new Error("LibreOffice installation finished, but LibreOffice was not detected.");
+      }
+      if (result.path) {
+        process.env.SOFFICE_PATH = result.path;
+        process.env.PRESENTON_OFFICE_RENDERER = "libreoffice";
+      }
+      sendProgress(wc, "done", 100, "LibreOffice is ready");
+      return { ok: true, path: result.path ?? getSofficePath() };
     } catch (err: unknown) {
-      const message =
-        err instanceof Error
+      const message = libreOfficeInstallCancellationRequested
+        ? "LibreOffice installation cancelled."
+        : err instanceof Error
           ? err.message
           : "An unexpected error occurred. You can install LibreOffice manually later.";
       sendLog(wc, "error", message);
       sendProgress(wc, "error", undefined, message);
+      return {
+        ok: false,
+        cancelled: libreOfficeInstallCancellationRequested,
+        error: message,
+      };
     } finally {
+      libreOfficeInstallCancellationRequested = false;
       wc.removeListener("destroyed", onDestroyed);
     }
   });

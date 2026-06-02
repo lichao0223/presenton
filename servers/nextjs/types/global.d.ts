@@ -37,6 +37,15 @@ interface ElectronAPI {
   uploadImage: (file: Buffer) => Promise<any>;
   writeNextjsLog: (logData: string) => Promise<any>;
   clearNextjsLogs: () => Promise<any>;
+  checkLibreOffice: () => Promise<{ installed: boolean; version?: string; path?: string }>;
+  installLibreOffice: () => Promise<{ ok: boolean; cancelled?: boolean; error?: string; path?: string }>;
+  cancelLibreOfficeInstall: () => Promise<{ ok: boolean; error?: string }>;
+  onLibreOfficeProgress: (
+    callback: (payload: { phase: string; percent?: number; message?: string }) => void
+  ) => () => void;
+  onLibreOfficeLog: (
+    callback: (payload: { level: string; text: string }) => void
+  ) => () => void;
   hasRequiredKey: () => Promise<{ hasKey: boolean }>;
   telemetryStatus: () => Promise<{ telemetryEnabled: boolean }>;
   getTemplates: () => Promise<

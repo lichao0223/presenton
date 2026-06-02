@@ -16,7 +16,7 @@ import {
   removeBrokenExportChromiumCaches,
   resolveLaunchableExportChromiumPath,
 } from "../utils/export-chromium";
-import { isWindowsStoreInstall, resolveExportSpawnTarget } from "../utils/export-msix-runtime";
+import { resolveExportSpawnTarget } from "../utils/export-msix-runtime";
 
 type BinaryFormat = "elf" | "mach-o" | "pe" | "unknown";
 type RuntimeCandidate = {
@@ -125,6 +125,12 @@ export function setupExportHandlers() {
             "Export could not prepare Chromium for this Microsoft Store install. Restart Presenton and try again.",
         };
       }
+      const puppeteerTempDir = path.join(tempDir, "puppeteer");
+      const puppeteerCacheDir = path.join(getCacheDir(), "puppeteer");
+      await Promise.all([
+        fs.promises.mkdir(puppeteerTempDir, { recursive: true }),
+        fs.promises.mkdir(puppeteerCacheDir, { recursive: true }),
+      ]);
       const baseExportEnv = {
         ...process.env,
         TEMP_DIRECTORY: tempDir,
@@ -132,9 +138,8 @@ export function setupExportHandlers() {
         NODE_ENV: "development",
         BUILT_PYTHON_MODULE_PATH: pythonModulePath,
         PUPPETEER_EXECUTABLE_PATH: chromiumExecutablePath,
-        ...(isWindowsStoreInstall() && {
-          PUPPETEER_CACHE_DIR: path.join(getCacheDir(), "puppeteer"),
-        }),
+        PUPPETEER_CACHE_DIR: puppeteerCacheDir,
+        PUPPETEER_TMP_DIR: puppeteerTempDir,
       };
       const responsePath = exportTaskPath.replace(".json", ".response.json");
       const responseRaw = await runExportTaskAndReadResponse(

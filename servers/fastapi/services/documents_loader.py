@@ -284,21 +284,7 @@ class DocumentsLoader:
             return self._parse_with_liteparse(converted_path)
 
     def load_image(self, file_path: str, temp_dir: Optional[str] = None) -> str:
-        if temp_dir:
-            converted_path = self.document_conversion_service.convert_image_to_png(
-                file_path,
-                temp_dir,
-                timeout_seconds=self.DECOMPOSE_TIMEOUT_SECONDS,
-            )
-            return self._parse_with_liteparse(converted_path)
-
-        with tempfile.TemporaryDirectory(prefix="image-convert-") as conversion_dir:
-            converted_path = self.document_conversion_service.convert_image_to_png(
-                file_path,
-                conversion_dir,
-                timeout_seconds=self.DECOMPOSE_TIMEOUT_SECONDS,
-            )
-            return self._parse_with_liteparse(converted_path)
+        return self._parse_with_liteparse(file_path)
 
     def _parse_with_liteparse(self, file_path: str) -> str:
         try:

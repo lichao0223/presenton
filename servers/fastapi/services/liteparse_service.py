@@ -83,9 +83,6 @@ class LiteParseService:
         """Build environment for Node subprocesses."""
         env = os.environ.copy()
 
-        # LiteParse checks ImageMagick availability with `which magick`.
-        # On macOS app launches, PATH often excludes Homebrew bins, even when
-        # IMAGEMAGICK_BINARY is configured to an absolute executable path.
         path_entries = [p for p in (env.get("PATH") or "").split(os.pathsep) if p]
         additional_entries = []
 
@@ -94,6 +91,10 @@ class LiteParseService:
             magick_dir = os.path.dirname(imagemagick_binary)
             if magick_dir:
                 additional_entries.append(magick_dir)
+
+        magick_home = (env.get("MAGICK_HOME") or "").strip()
+        if magick_home:
+            additional_entries.extend([magick_home, os.path.join(magick_home, "bin")])
 
         soffice_binary = (env.get("SOFFICE_PATH") or "").strip()
         if soffice_binary:
@@ -129,6 +130,7 @@ class LiteParseService:
         candidates = [
             self.runner_dir,
             os.path.abspath(os.path.join(self.runner_dir, "..")),
+            os.path.abspath(os.path.join(self.runner_dir, "..", "..")),
             os.path.abspath(os.path.join(os.getcwd(), "..", "..", "document-extraction-liteparse")),
             os.path.abspath(os.path.join(os.getcwd(), "..", "..")),
             "/app/document-extraction-liteparse",
@@ -179,6 +181,17 @@ class LiteParseService:
             os.path.abspath(
                 os.path.join(
                     cwd, "..", "..", "app", "resources", "document-extraction", "liteparse_runner.mjs"
+                )
+            ),
+            os.path.abspath(
+                os.path.join(
+                    cwd,
+                    "..",
+                    "..",
+                    "electron",
+                    "resources",
+                    "document-extraction",
+                    "liteparse_runner.mjs",
                 )
             ),
         ]

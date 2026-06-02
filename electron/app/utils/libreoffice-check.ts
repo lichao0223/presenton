@@ -1,20 +1,14 @@
 /**
  * libreoffice-check.ts
  *
- * Checks whether LibreOffice is available on the host machine before the
- * main BrowserWindow is created. LibreOffice is required for creating custom
- * templates from uploaded PPTX files.
- *
- * If not found, shows a branded installer window that lets the user download
- * and install LibreOffice with a real-time progress UI.
+ * Checks whether LibreOffice is available on the host machine. LibreOffice is
+ * required only when creating custom templates from uploaded PPTX files.
  */
 
-import { BrowserWindow, ipcMain, app } from "electron";
 import { exec } from "child_process";
 import * as util from "util";
 import * as fs from "fs";
 import * as path from "path";
-import { baseDir } from "./constants";
 
 const execAsync = util.promisify(exec);
 
@@ -358,104 +352,4 @@ export async function isLibreOfficeInstalled(): Promise<LibreOfficeCheckResult> 
   setResolvedSofficePath(pathBinary);
   const version = await getVersionForBinary(pathBinary);
   return { installed: true, version, path: pathBinary };
-}
-
-// ---------------------------------------------------------------------------
-// Installer window
-// ---------------------------------------------------------------------------
-
-/**
- * Opens a branded 520×400 installer window that lets the user download and
- * install LibreOffice with a live progress UI.
- *
- * Returns a Promise that resolves once the window is closed (either by the
- * user skipping or after a successful install).
- */
-async function showLibreOfficeInstallerWindow(): Promise<void> {
-  return new Promise<void>((resolve) => {
-    const win = new BrowserWindow({
-      width: 520,
-      height: 560,
-      resizable: false,
-      center: true,
-      title: "Presenton – Install LibreOffice",
-      icon: path.join(baseDir, "resources/ui/assets/images/presenton_short_filled.png"),
-      webPreferences: {
-        webSecurity: false,
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false,
-        preload: path.join(__dirname, "../preloads/libreoffice-installer.js"),
-      },
-    });
-
-    win.setMenuBarVisibility(false);
-
-    const htmlPath = path.join(
-      baseDir,
-      "resources/ui/libreoffice-installer/index.html"
-    );
-    win.loadFile(htmlPath);
-
-    // lo:skip is sent by the renderer when the user clicks "Skip" or after
-    // a successful install (the success state auto-sends skip after 2 s).
-    const onSkip = () => {
-      if (!win.isDestroyed()) win.close();
-    };
-    ipcMain.once("lo:skip", onSkip);
-
-    win.on("closed", () => {
-      // Remove the listener in case the window was closed by the OS (title-bar X)
-      ipcMain.removeListener("lo:skip", onSkip);
-      resolve();
-    });
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Checks for LibreOffice. When absent, shows a branded installer window that
- * lets the user install it. Never blocks app startup — always returns `true`.
- *
- * Call this function **before** creating the main `BrowserWindow`.
- *
- * @returns Always `true` – the application should always proceed.
- */
-export async function checkLibreOfficeBeforeWindow(
-  onStatus?: (status: LibreOfficeStatus) => void
-): Promise<boolean> {
-  onStatus?.("checking");
-  let result = await isLibreOfficeInstalled();
-
-  if (result.installed) {
-    if (result.path) {
-      resolvedSofficePath = result.path;
-    }
-    console.log(
-      `[LibreOffice] Detected: ${result.version ?? "(version unknown)"} at ${resolvedSofficePath}`
-    );
-    onStatus?.("installed");
-    return true;
-  }
-
-  console.warn("[LibreOffice] Not found – showing installer window.");
-  onStatus?.("missing");
-  onStatus?.("installing");
-  await showLibreOfficeInstallerWindow();
-
-  // Re-detect after the window closes (install may have succeeded)
-  result = await isLibreOfficeInstalled();
-  if (result.installed && result.path) {
-    resolvedSofficePath = result.path;
-    console.log(`[LibreOffice] Detected after install: ${resolvedSofficePath}`);
-    onStatus?.("installed");
-  } else {
-    onStatus?.("missing");
-  }
-
-  // Always proceed – never block the app
-  return true;
 }

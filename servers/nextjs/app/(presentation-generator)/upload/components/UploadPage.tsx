@@ -35,7 +35,8 @@ const STOCK_IMAGE_PROVIDERS = new Set(["pexels", "pixabay"]);
 const FILE_TYPE_WORD = new Set([".doc", ".docx", ".docm", ".odt", ".rtf"]);
 const FILE_TYPE_PRESENTATION = new Set([".ppt", ".pptx", ".pptm", ".odp"]);
 const FILE_TYPE_SPREADSHEET = new Set([".xls", ".xlsx", ".xlsm", ".ods", ".csv", ".tsv"]);
-const FILE_TYPE_IMAGE = new Set([".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".svg"]);
+const FILE_TYPE_IMAGE = new Set([".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"]);
+const FILE_MIME_IMAGE = new Set(["image/jpeg", "image/png", "image/gif", "image/bmp", "image/tiff", "image/webp"]);
 const FILE_TYPE_PDF = new Set([".pdf"]);
 const FILE_TYPE_TEXT = new Set([".txt"]);
 
@@ -59,7 +60,7 @@ const getFileCategory = (file: File): string => {
   if (FILE_TYPE_WORD.has(extension)) return "word";
   if (FILE_TYPE_PRESENTATION.has(extension)) return "presentation";
   if (FILE_TYPE_SPREADSHEET.has(extension)) return "spreadsheet";
-  if (FILE_TYPE_IMAGE.has(extension) || (file.type || "").startsWith("image/")) return "image";
+  if (FILE_TYPE_IMAGE.has(extension) || FILE_MIME_IMAGE.has((file.type || "").toLowerCase())) return "image";
   if (FILE_TYPE_PDF.has(extension) || file.type === "application/pdf") return "pdf";
   if (FILE_TYPE_TEXT.has(extension) || file.type === "text/plain") return "text";
   return "other";
