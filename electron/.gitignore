@@ -38,6 +38,7 @@ resources/chromium/
 # Optional bundled ImageMagick binaries — see docs/electron-dependency-strategy.md
 resources/imagemagick/
 *.pkg
+*.provisionprofile
 *.toc
 *.zip
 *.pyc

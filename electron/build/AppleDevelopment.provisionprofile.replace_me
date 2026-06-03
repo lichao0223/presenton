@@ -1,0 +1,21 @@
+Replace this marker with the real MAS development provisioning profile.
+
+Required final file name:
+
+AppleDevelopment.provisionprofile
+
+Where it should live:
+
+electron/build/AppleDevelopment.provisionprofile
+
+How to create it:
+
+1. Go to Apple Developer > Certificates, Identifiers & Profiles > Profiles.
+2. Create a macOS App Development provisioning profile.
+3. Select the explicit App ID: com.presenton.presenton.
+4. Select the Apple Development certificate installed on the Mac.
+5. Select the registered Mac device used for local testing.
+6. Download the profile.
+7. Rename or copy it to AppleDevelopment.provisionprofile in this folder.
+
+Do not commit the real .provisionprofile file. It is ignored by git.

@@ -2,6 +2,10 @@ const builder = require("electron-builder")
 const fs = require("fs")
 const path = require("path")
 
+const APP_ID = "com.presenton.presenton"
+const TEAM_ID = "S6W5C54KL6"
+const macTarget = process.env.PRESENTON_MAC_TARGET
+
 // AfterPack hook: set executable permissions on macOS; no-op on Windows
 const afterPack = async (context) => {
   if (context.electronPlatformName === "darwin") {
@@ -59,7 +63,8 @@ const afterPack = async (context) => {
 }
 
 const config = {
-  appId: "PresentonAI.Presenton",
+  appId: APP_ID,
+  productName: "Presenton",
   asar: false,
   copyright: "Copyright © 2026 Presenton",
   directories: {
@@ -75,9 +80,20 @@ const config = {
   afterPack,
   mac: {
     artifactName: "Presenton-${version}.${ext}",
-    target: ["dmg"],
+    target: [macTarget || "dmg"],
     category: "public.app-category.productivity",
+    hardenedRuntime: false,
+    gatekeeperAssess: false,
     icon: "resources/ui/assets/images/presenton_short_filled.png",
+    extendInfo: {
+      ElectronTeamID: TEAM_ID,
+    },
+  },
+  masDev: {
+    type: "development",
+    provisioningProfile: "build/AppleDevelopment.provisionprofile",
+    entitlements: "build/entitlements.mas.plist",
+    entitlementsInherit: "build/entitlements.mas.inherit.plist",
   },
   linux: {
     artifactName: "Presenton-${version}.${ext}",
@@ -117,4 +133,6 @@ const config = {
   },
 }
 
-builder.build({ config })
+const targets = macTarget ? builder.Platform.MAC.createTarget([macTarget]) : undefined
+
+builder.build({ targets, config })

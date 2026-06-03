@@ -1,0 +1,11 @@
+Optional future MAS distribution profile marker.
+
+This repo is currently configured for local MAS development testing via mas-dev.
+You do not need this file for npm run build:all:mas-dev.
+
+When App Store distribution support is added, replace this marker with the real
+Mac App Store provisioning profile and name it:
+
+MacAppStore.provisionprofile
+
+Do not commit the real .provisionprofile file. It is ignored by git.

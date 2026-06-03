@@ -1,0 +1,21 @@
+Replace this marker with the real macOS icon file when final icons are ready.
+
+Expected final file name, if the config is changed to the standard macOS icon:
+
+icon.icns
+
+Typical source folder:
+
+electron/build/icon.iconset/
+
+On macOS, generate the .icns file with:
+
+iconutil -c icns icon.iconset -o icon.icns
+
+Current note:
+
+The builder config still points to the existing placeholder image path:
+
+resources/ui/assets/images/presenton_short_filled.png
+
+That was left unchanged intentionally until the final macOS icon set is ready.
