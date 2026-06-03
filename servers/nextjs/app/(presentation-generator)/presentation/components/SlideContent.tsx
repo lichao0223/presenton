@@ -94,6 +94,14 @@ const SlideContent = ({
 
   const onDeleteSlide = async () => {
     try {
+      if ((presentationData?.slides?.length ?? 0) <= 1) {
+        notify.warning(
+          "Cannot delete slide",
+          "A presentation must contain at least one slide."
+        );
+        return;
+      }
+
       trackEvent(MixpanelEvent.Presentation_Slide_Deleted, {
         pathname,
         presentation_id: presentationId,
