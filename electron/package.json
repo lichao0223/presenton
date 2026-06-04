@@ -48,7 +48,7 @@
     "generate:version": "node generate_update.js",
     "upload:sourcemaps": "node scripts/upload-sourcemaps.cjs",
     "build:electron": "npm run generate:version && npm run build:export-runtime && npm run prepare:export-chromium && npm run prepare:imagemagick && npm run typecheck && npm run build:ts && npm run check:main-no-undef && node build.js",
-    "build:electron:mas-dev": "npm run generate:version && npm run build:export-runtime && npm run typecheck && npm run build:ts && npm run check:main-no-undef && cross-env PRESENTON_MAC_TARGET=mas-dev node build.js",
+    "build:electron:mas-dev": "npm run generate:version && npm run build:export-runtime && npm run prepare:export-chromium && npm run prepare:imagemagick && npm run typecheck && npm run build:ts && npm run check:main-no-undef && cross-env PRESENTON_MAC_TARGET=mas-dev node build.js",
     "dist:mac:mas-dev": "cross-env PRESENTON_MAC_TARGET=mas-dev node build.js",
     "build:all": "npm run clean:build && npm run setup:env && npm run build:ts && npm run install:pyinstaller && npm run build:nextjs && npm run build:fastapi && npm run build:electron",
     "build:all:mas-dev": "npm run clean:build && npm run setup:env && npm run build:ts && npm run install:pyinstaller && npm run build:nextjs && npm run build:fastapi && npm run build:electron:mas-dev",

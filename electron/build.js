@@ -1,113 +1,117 @@
 const builder = require("electron-builder")
+const { execFileSync } = require("child_process")
 const fs = require("fs")
 const path = require("path")
-const { normalizeBundledMacChromiumForPackaging } = require("./scripts/prepare-export-chromium.cjs")
 
 const APP_ID = "com.presenton.presenton"
 const TEAM_ID = "S6W5C54KL6"
 const macTarget = process.env.PRESENTON_MAC_TARGET
+const masDevProvisioningProfile = getMasDevProvisioningProfile()
+const masDevIdentity =
+  process.env.PRESENTON_MAS_DEV_IDENTITY || process.env.CSC_NAME || ""
 
-function getResourcesRoot(context) {
+function getMasDevProvisioningProfile() {
+  try {
+    return resolveMasDevProvisioningProfile()
+  } catch (error) {
+    console.error(`\n${error.message}\n`)
+    process.exit(1)
+  }
+}
+
+function resolveMasDevProvisioningProfile() {
+  if (macTarget !== "mas-dev") {
+    return undefined
+  }
+
+  const candidates = [
+    "build/AppleDevelopment.provisionprofile",
+    "build/AppleDev.provisionprofile",
+    "build/AppDev.provisionprofile",
+  ]
+  const undecodableProfiles = []
+
+  for (const candidate of candidates) {
+    const candidatePath = path.join(__dirname, candidate)
+    if (!fs.existsSync(candidatePath)) {
+      continue
+    }
+
+    try {
+      execFileSync("security", ["cms", "-D", "-i", candidatePath], {
+        stdio: "ignore",
+      })
+      return candidate
+    } catch {
+      undecodableProfiles.push(candidate)
+    }
+  }
+
+  if (undecodableProfiles.length > 0) {
+    throw new Error(
+      `Found MAS development provisioning profile, but macOS could not decode it: ${undecodableProfiles.join(", ")}. Re-download a macOS App Development provisioning profile and replace the local file.`
+    )
+  }
+
+  throw new Error(
+    `Missing MAS development provisioning profile. Expected one of: ${candidates.join(", ")}`
+  )
+}
+
+// AfterPack hook: set executable permissions on macOS; no-op on Windows
+const afterPack = async (context) => {
   if (context.electronPlatformName === "darwin") {
+    const appPath = context.appOutDir
     const appBundleName = `${context.packager.appInfo.productFilename}.app`
-    return path.join(
-      context.appOutDir,
+    const resourcesRoot = path.join(
+      appPath,
       appBundleName,
       "Contents",
       "Resources",
       "app",
       "resources"
     )
+    const fastapiPath = path.join(resourcesRoot, "fastapi", "fastapi")
+    const exportPyDir = path.join(resourcesRoot, "export", "py")
+    const converterCandidates = [
+      `convert-${process.platform}-${process.arch}`,
+      `convert-${process.platform}`,
+      "convert",
+    ]
+
+    console.log("Setting executable permissions for FastAPI binary...")
+    console.log("FastAPI path:", fastapiPath)
+
+    if (fs.existsSync(fastapiPath)) {
+      fs.chmodSync(fastapiPath, 0o755)
+      console.log("✓ Execute permissions set for FastAPI")
+    } else {
+      console.warn("⚠ FastAPI binary not found at:", fastapiPath)
+    }
+
+    console.log("Setting executable permissions for export converter binary...")
+    let converterFound = false
+    for (const candidate of converterCandidates) {
+      const candidatePath = path.join(exportPyDir, candidate)
+      if (fs.existsSync(candidatePath)) {
+        fs.chmodSync(candidatePath, 0o755)
+        console.log("✓ Execute permissions set for converter:", candidatePath)
+        converterFound = true
+      }
+    }
+    if (!converterFound) {
+      console.warn("⚠ No converter binary found in:", exportPyDir)
+    }
+
+    const fastapiDir = path.join(resourcesRoot, "fastapi")
+    if (fs.existsSync(fastapiDir)) {
+      console.log("FastAPI directory contents:", fs.readdirSync(fastapiDir))
+    }
+
+    if (fs.existsSync(exportPyDir)) {
+      console.log("Export py directory contents:", fs.readdirSync(exportPyDir))
+    }
   }
-
-  return path.join(context.appOutDir, "resources", "app", "resources")
-}
-
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"))
-}
-
-function chmodExecutableIfPresent(filePath) {
-  if (fs.existsSync(filePath) && process.platform !== "win32") {
-    fs.chmodSync(filePath, 0o755)
-  }
-}
-
-function assertFile(filePath, label) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`${label} missing at ${filePath}`)
-  }
-}
-
-function assertManifestRuntime(rootDir, manifestName, label) {
-  const manifestPath = path.join(rootDir, manifestName)
-  assertFile(manifestPath, `${label} manifest`)
-  const manifest = readJson(manifestPath)
-  const executable = manifest.executable || manifest.binary
-  if (!executable) {
-    throw new Error(`${label} manifest does not declare executable/binary: ${manifestPath}`)
-  }
-
-  const executablePath = path.join(rootDir, executable)
-  assertFile(executablePath, `${label} executable`)
-  chmodExecutableIfPresent(executablePath)
-  return executablePath
-}
-
-function setExecutablePermissions(resourcesRoot, platform, arch) {
-  const fastapiBinary = platform === "win32" ? "fastapi.exe" : "fastapi"
-  const fastapiPath = path.join(resourcesRoot, "fastapi", fastapiBinary)
-  const exportPyDir = path.join(resourcesRoot, "export", "py")
-  const exeSuffix = platform === "win32" ? ".exe" : ""
-  const converterCandidates = [
-    `convert-${platform}-${arch}${exeSuffix}`,
-    `convert-${platform}${exeSuffix}`,
-    `convert${exeSuffix}`,
-  ]
-
-  chmodExecutableIfPresent(fastapiPath)
-  for (const candidate of converterCandidates) {
-    chmodExecutableIfPresent(path.join(exportPyDir, candidate))
-  }
-}
-
-function validateBundledRuntimes(resourcesRoot, platform, arch) {
-  assertManifestRuntime(
-    path.join(resourcesRoot, "chromium"),
-    "presenton-runtime.json",
-    "Chromium runtime"
-  )
-  assertManifestRuntime(
-    path.join(resourcesRoot, "imagemagick", `${platform}-${arch}`),
-    "presenton-runtime.json",
-    "ImageMagick runtime"
-  )
-}
-
-function getTargetArch(context) {
-  const arch = builder.Arch?.[context.arch]
-  if (arch && arch !== "universal") {
-    return arch
-  }
-  return process.arch
-}
-
-const beforePack = async (context) => {
-  if (context.electronPlatformName !== "darwin") {
-    return
-  }
-
-  normalizeBundledMacChromiumForPackaging(path.join(__dirname, "resources", "chromium"))
-}
-
-const afterPack = async (context) => {
-  const platform = context.electronPlatformName
-  const arch = getTargetArch(context)
-  const resourcesRoot = getResourcesRoot(context)
-
-  console.log("Validating packaged native runtimes in:", resourcesRoot)
-  setExecutablePermissions(resourcesRoot, platform, arch)
-  validateBundledRuntimes(resourcesRoot, platform, arch)
 }
 
 const config = {
@@ -125,7 +129,6 @@ const config = {
     "node_modules",
     "NOTICE"
   ],
-  beforePack,
   afterPack,
   mac: {
     artifactName: "Presenton-${version}.${ext}",
@@ -133,6 +136,7 @@ const config = {
     category: "public.app-category.productivity",
     hardenedRuntime: false,
     gatekeeperAssess: false,
+    identity: macTarget === "mas-dev" ? null : undefined,
     icon: "resources/ui/assets/images/presenton_short_filled.png",
     extendInfo: {
       ElectronTeamID: TEAM_ID,
@@ -140,9 +144,12 @@ const config = {
   },
   masDev: {
     type: "development",
-    provisioningProfile: "build/AppleDevelopment.provisionprofile",
+    identity: masDevIdentity,
+    provisioningProfile: masDevProvisioningProfile,
     entitlements: "build/entitlements.mas.plist",
     entitlementsInherit: "build/entitlements.mas.inherit.plist",
+    // osx-sign always adds --timestamp; this later flag keeps local MAS dev signing offline-tolerant.
+    additionalArguments: ["--timestamp=none"],
   },
   linux: {
     artifactName: "Presenton-${version}.${ext}",
@@ -178,6 +185,7 @@ const config = {
     displayName: "Presenton",
     publisherDisplayName: "Presenton Inc.",
     applicationId: "PresentonAI.Presenton",
+    
   },
 }
 
