@@ -1,7 +1,9 @@
 import asyncio
 import errno
 import os
+import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import zipfile
@@ -16,14 +18,37 @@ from templates.pptx_font_utils import (
 _LIBREOFFICE_LOCK_FILE_PATH = "/tmp/libreoffice_convert.lock"
 _LIBREOFFICE_LOCK_WAIT_TIMEOUT_SECONDS = 500
 _LIBREOFFICE_LOCK_RETRY_SECONDS = 0.1
+_SOFFICE_NOT_FOUND_MESSAGE = (
+    "LibreOffice executable not found. Install LibreOffice or set SOFFICE_PATH "
+    "to the soffice binary."
+)
 
 
-def _get_soffice_binary() -> str:
-    configured = os.environ.get("SOFFICE_PATH")
-    if configured:
-        return configured
+def _existing_executable(path: str) -> Optional[str]:
+    candidate = (path or "").strip()
+    if not candidate:
+        return None
+    if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+        return candidate
+    return shutil.which(candidate)
+
+
+def _scan_libreoffice_app_bundles(app_dir: str) -> List[str]:
+    try:
+        entries = os.listdir(app_dir)
+    except OSError:
+        return []
+
+    return [
+        os.path.join(app_dir, entry, "Contents", "MacOS", "soffice")
+        for entry in entries
+        if entry.lower().startswith("libreoffice") and entry.lower().endswith(".app")
+    ]
+
+
+def _candidate_soffice_binaries() -> List[str]:
     if os.name == "nt":
-        candidates: List[str] = []
+        candidates: List[str] = ["soffice.exe"]
         for root in [
             os.environ.get("ProgramFiles"),
             os.environ.get("ProgramFiles(x86)"),
@@ -35,20 +60,100 @@ def _get_soffice_binary() -> str:
             candidates.extend(
                 [
                     os.path.join(root, "LibreOffice", "program", "soffice.exe"),
-                    os.path.join(root, "Programs", "LibreOffice", "program", "soffice.exe"),
+                    os.path.join(
+                        root, "Programs", "LibreOffice", "program", "soffice.exe"
+                    ),
                 ]
             )
             try:
                 for entry in os.listdir(root):
                     if entry.lower().startswith("libreoffice"):
-                        candidates.append(os.path.join(root, entry, "program", "soffice.exe"))
+                        candidates.append(
+                            os.path.join(root, entry, "program", "soffice.exe")
+                        )
             except OSError:
                 pass
+        return candidates
 
-        for candidate in candidates:
-            if os.path.exists(candidate):
-                return candidate
-    return "soffice.exe" if os.name == "nt" else "soffice"
+    candidates = ["soffice", "libreoffice"]
+    if sys.platform == "darwin":
+        home = os.environ.get("HOME")
+        candidates.extend(_scan_libreoffice_app_bundles("/Applications"))
+        if home:
+            candidates.extend(
+                _scan_libreoffice_app_bundles(os.path.join(home, "Applications"))
+            )
+        candidates.extend(
+            [
+                "/usr/local/bin/soffice",
+                "/usr/local/lib/libreoffice/program/soffice",
+                "/opt/homebrew/bin/soffice",
+                "/opt/homebrew/lib/libreoffice/program/soffice",
+                "/opt/local/bin/soffice",
+            ]
+        )
+    else:
+        candidates.extend(
+            [
+                "/usr/bin/soffice",
+                "/usr/bin/libreoffice",
+                "/usr/lib/libreoffice/program/soffice",
+                "/usr/lib64/libreoffice/program/soffice",
+                "/usr/local/bin/soffice",
+                "/usr/local/lib/libreoffice/program/soffice",
+                "/snap/bin/soffice",
+                "/snap/bin/libreoffice",
+                "/var/lib/snapd/snap/bin/soffice",
+                "/var/lib/snapd/snap/bin/libreoffice",
+                "/var/lib/flatpak/exports/bin/org.libreoffice.LibreOffice",
+                "/var/lib/flatpak/app/org.libreoffice.LibreOffice/current/active/"
+                "export/bin/libreoffice",
+            ]
+        )
+        try:
+            for entry in os.listdir("/opt"):
+                if entry.lower().startswith("libreoffice"):
+                    candidates.append(
+                        os.path.join("/opt", entry, "program", "soffice")
+                    )
+        except OSError:
+            pass
+        home = os.environ.get("HOME")
+        if home:
+            candidates.extend(
+                [
+                    os.path.join(
+                        home,
+                        ".local/share/flatpak/exports/bin/org.libreoffice.LibreOffice",
+                    ),
+                    os.path.join(
+                        home,
+                        ".local/share/flatpak/app/org.libreoffice.LibreOffice/"
+                        "current/active/export/bin/libreoffice",
+                    ),
+                    os.path.join(home, ".local/bin/soffice"),
+                    os.path.join(home, ".local/lib/libreoffice/program/soffice"),
+                ]
+            )
+    return candidates
+
+
+def _get_soffice_binary() -> str:
+    configured = (os.environ.get("SOFFICE_PATH") or "").strip()
+    if configured:
+        resolved = _existing_executable(configured)
+        if resolved:
+            return resolved
+        raise FileNotFoundError(
+            f"Configured SOFFICE_PATH was not found or is not executable: {configured}"
+        )
+
+    for candidate in _candidate_soffice_binaries():
+        resolved = _existing_executable(candidate)
+        if resolved:
+            return resolved
+
+    raise FileNotFoundError(_SOFFICE_NOT_FOUND_MESSAGE)
 
 
 def _windows_hidden_subprocess_kwargs() -> dict:
@@ -217,9 +322,11 @@ async def convert_pptx_to_pdf(
             _log("info", "File lock acquired, proceeding with LibreOffice conversion...")
 
         try:
+            soffice_binary = _get_soffice_binary()
+            _log("info", f"Using LibreOffice binary: {soffice_binary}")
             subprocess.run(
                 [
-                    _get_soffice_binary(),
+                    soffice_binary,
                     "--headless",
                     "--convert-to",
                     "pdf",
@@ -241,6 +348,8 @@ async def convert_pptx_to_pdf(
         except subprocess.CalledProcessError as exc:
             error_msg = exc.stderr if exc.stderr else str(exc)
             raise Exception(f"LibreOffice PDF conversion failed: {error_msg}") from exc
+        except FileNotFoundError as exc:
+            raise Exception(str(exc)) from exc
         finally:
             if lock_file is not None:
                 import fcntl
@@ -262,6 +371,10 @@ async def convert_pptx_to_pdf(
         _log("info", f"Generated PDF: {actual_pdf_path}")
         return actual_pdf_path
     except Exception as exc:
-        if "timed out" in str(exc) or "failed" in str(exc):
+        if (
+            "LibreOffice" in str(exc)
+            or "timed out" in str(exc)
+            or "failed" in str(exc)
+        ):
             raise
         raise Exception("PPTX to PDF conversion failed") from exc
