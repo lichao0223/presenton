@@ -598,7 +598,7 @@ Prepend your server’s root URL to <code>path</code> and
 
 <ul>
   <li>
-    <a href="https://docs.presenton.ai/using-presenton-api">
+    <a href="https://docs.presenton.ai/v3/guide/using-presenton-api">
       Full API Documentation
     </a>
   </li>
