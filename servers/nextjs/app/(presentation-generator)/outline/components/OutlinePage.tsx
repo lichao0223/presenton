@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import OutlinePromptBar from "./OutlinePromptBar";
 import Chat from "../../presentation/components/Chat";
 import { cn } from "@/lib/utils";
-import { clearOutlines, setPresentationId } from "@/store/slices/presentationGeneration";
+import { clearOutlines, setOutlines, setPresentationId } from "@/store/slices/presentationGeneration";
 import { setPptGenUploadState } from "@/store/slices/presentationGenUpload";
 import { LanguageType, PresentationConfig, ToneType, VerbosityType } from "../../upload/type";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
@@ -53,6 +53,24 @@ const getDocumentPaths = (files: unknown): string[] => {
     .filter((filePath): filePath is string => typeof filePath === "string");
 };
 
+const getOutlinesFromResponse = (outline: any): { content: string }[] => {
+  const slides = outline?.slides;
+  if (!Array.isArray(slides)) {
+    return [];
+  }
+
+  return slides.map((slide) => {
+    const content = slide?.content;
+    if (typeof content === "string") {
+      return { content };
+    }
+    if (content == null) {
+      return { content: "" };
+    }
+    return { content: String(content) };
+  });
+};
+
 const OutlinePage: React.FC = () => {
   const dispatch = useDispatch();
   const { presentation_id, outlines } = useSelector(
@@ -70,7 +88,10 @@ const OutlinePage: React.FC = () => {
   const [isRegeneratingOutline, setIsRegeneratingOutline] = useState(false);
 
   // Custom hooks
-  const streamState = useOutlineStreaming(presentation_id);
+  const streamState = useOutlineStreaming(
+    presentation_id,
+    activeTab === TABS.OUTLINE
+  );
   const { handleDragEnd, handleAddSlide } = useOutlineManagement(outlines);
   const { loadingState, handleSubmit } = usePresentationGeneration(
     presentation_id,
@@ -166,6 +187,23 @@ const OutlinePage: React.FC = () => {
     }
   }, [dispatch, documentPaths, draftConfig, files, outlineControlsBusy]);
 
+  const handleOutlineChanged = useCallback(async () => {
+    if (!presentation_id) {
+      return;
+    }
+
+    const outline = await PresentationGenerationApi.getOutlines(presentation_id);
+    dispatch(setOutlines(getOutlinesFromResponse(outline)));
+  }, [dispatch, presentation_id]);
+
+  const handleBeforeOutlineChatSend = useCallback(async () => {
+    if (!presentation_id) {
+      return;
+    }
+
+    await PresentationGenerationApi.updateOutlines(presentation_id, outlines);
+  }, [outlines, presentation_id]);
+
   if (!presentation_id) {
     return <EmptyStateView />;
   }
@@ -225,7 +263,7 @@ const OutlinePage: React.FC = () => {
                   </TabsList>
                 </div>
 
-                <TabsContent value={TABS.OUTLINE} className="mt-0">
+                <TabsContent value={TABS.OUTLINE} className="mt-0 pb-24">
                   <OutlineContent
                     outlines={outlines}
                     isLoading={streamState.isLoading}
@@ -251,6 +289,8 @@ const OutlinePage: React.FC = () => {
                     key={presentation_id}
                     presentationId={presentation_id}
                     variant="outline"
+                    onBeforeSend={handleBeforeOutlineChatSend}
+                    onPresentationChanged={handleOutlineChanged}
                   />
                 </aside>
               )}
@@ -259,8 +299,10 @@ const OutlinePage: React.FC = () => {
 
           <div
             className={cn(
-              "fixed bottom-[26px] right-[26px] z-50",
-              activeTab === TABS.OUTLINE && "lg:right-[390px]"
+              "fixed bottom-[26px] z-50",
+              activeTab === TABS.OUTLINE
+                ? "left-5 sm:left-10 lg:left-auto lg:right-[calc(5rem+352px+2.5rem)]"
+                : "right-[26px]"
             )}
           >
             <GenerateButton

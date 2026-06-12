@@ -229,12 +229,6 @@ const outlineQuickPrompts = [
   "Improve introduction",
 ];
 
-const outlineFooterPrompts = [
-  "shuffle icon",
-  "Generate new structure",
-  "Generate",
-];
-
 type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "error";
@@ -245,7 +239,9 @@ type ChatMessage = {
 
 type ChatProps = {
   presentationId: string;
+  variant?: "presentation" | "outline";
   currentSlide?: number;
+  onBeforeSend?: () => Promise<void> | void;
   onPresentationChanged?: () => Promise<void> | void;
   onChatMutationStateChange?: (isMutating: boolean) => void;
   onAgentSlideFocus?: (focus: {
@@ -288,6 +284,11 @@ const AssistantMarker = () => (
 
 const TOOL_LABELS: Record<string, string> = {
   getPresentationOutline: "Outline reader",
+  getOutlineDraft: "Outline draft reader",
+  addOutline: "Outline adder",
+  updateOutline: "Outline editor",
+  deleteOutline: "Outline remover",
+  moveOutline: "Outline reorderer",
   searchSlides: "Slide search",
   getSlideAtIndex: "Slide reader",
   getPresentationThemeCatalog: "Theme catalog",
@@ -300,6 +301,10 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 const MUTATING_TOOLS = new Set([
+  "addOutline",
+  "updateOutline",
+  "deleteOutline",
+  "moveOutline",
   "saveSlide",
   "deleteSlide",
   "setPresentationTheme",
@@ -329,6 +334,21 @@ const humanizeTraceMessage = (message: string, tool?: string) => {
   }
   if (lower === "reading the presentation outline") {
     return "Reading the presentation outline.";
+  }
+  if (lower === "reading the outline draft") {
+    return "Reading the outline draft.";
+  }
+  if (lower === "adding an outline slide") {
+    return "Adding an outline slide.";
+  }
+  if (lower === "updating the outline slide") {
+    return "Updating the outline slide.";
+  }
+  if (lower === "deleting the outline slide") {
+    return "Deleting the outline slide.";
+  }
+  if (lower === "reordering outline slides") {
+    return "Reordering outline slides.";
   }
   if (lower === "searching relevant slides") {
     return "Searching slides for relevant content.";
@@ -507,7 +527,9 @@ const readTraceSlideIndex = (trace: ChatStreamTrace) => {
 
 const Chat = ({
   presentationId,
+  variant = "presentation",
   currentSlide,
+  onBeforeSend,
   onPresentationChanged,
   onChatMutationStateChange,
   onAgentSlideFocus,
@@ -760,16 +782,27 @@ const Chat = ({
   );
 
   const buildBackendMessage = (message: string) => {
-    if (typeof currentSlide !== "number") {
+    const contextLines: string[] = [];
+
+    if (variant === "outline") {
+      contextLines.push(
+        "UI context: the user is editing the outline draft before template/layout selection. Use outline draft tools for outline add/edit/delete/reorder requests; do not use layout or finished-slide tools for outline-only edits."
+      );
+    }
+
+    if (typeof currentSlide === "number") {
+      contextLines.push(
+        `UI context: the currently selected slide is slide ${
+          currentSlide + 1
+        } (zero-based index ${currentSlide}).`
+      );
+    }
+
+    if (contextLines.length === 0) {
       return message;
     }
 
-    return [
-      `UI context: the currently selected slide is slide ${
-        currentSlide + 1
-      } (zero-based index ${currentSlide}).`,
-      `User message: ${message}`,
-    ].join("\n");
+    return [...contextLines, `User message: ${message}`].join("\n");
   };
 
   const resetChat = () => {
@@ -804,7 +837,7 @@ const Chat = ({
         "Failed to refresh presentation after tool mutation:",
         error
       );
-      notify.error("Refresh failed", "Slides were saved, but refresh failed.");
+      notify.error("Refresh failed", "Changes were saved, but refresh failed.");
     } finally {
       refreshInFlightRef.current = false;
       if (refreshQueuedRef.current) {
@@ -815,12 +848,9 @@ const Chat = ({
   }, [onPresentationChanged]);
 
   const refreshPresentationIfNeeded = async (toolCalls: string[]) => {
-    const hasSlideMutation =
-      toolCalls.includes("saveSlide") ||
-      toolCalls.includes("deleteSlide") ||
-      toolCalls.includes("setPresentationTheme");
+    const hasMutation = toolCalls.some((tool) => MUTATING_TOOLS.has(tool));
     if (
-      !hasSlideMutation ||
+      !hasMutation ||
       !onPresentationChanged ||
       didIncrementalRefreshRef.current
     ) {
@@ -831,10 +861,7 @@ const Chat = ({
       await onPresentationChanged();
     } catch (error) {
       console.error("Failed to refresh presentation after chat update:", error);
-      notify.error(
-        "Refresh failed",
-        "Chat completed, but slide refresh failed."
-      );
+      notify.error("Refresh failed", "Chat completed, but refresh failed.");
     }
   };
 
@@ -972,6 +999,7 @@ const Chat = ({
     abortControllerRef.current = streamAbortController;
 
     try {
+      await onBeforeSend?.();
       const response = await PresentationChatApi.streamMessage(
         {
           presentation_id: presentationId,
@@ -1131,7 +1159,6 @@ const Chat = ({
     setErrorMessage(null);
     inputRef.current?.focus();
   };
-  const variant = "outline";
 
   const isOutlineVariant = variant === "outline";
 
@@ -1489,21 +1516,6 @@ const Chat = ({
           </div>
         </div>
       </form>
-      {isOutlineVariant && (
-        <div className="mx-4 mb-4 flex flex-wrap gap-2">
-          {outlineFooterPrompts.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => applyPrompt(prompt)}
-              disabled={isSending || isHistoryLoading}
-              className="rounded-[10px] border border-[#F4F4F4] bg-white px-2.5 py-1 text-[11px] font-normal leading-[15px] tracking-[0.367px] text-[#364153] transition-colors hover:bg-[#FAFAFA] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {prompt}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

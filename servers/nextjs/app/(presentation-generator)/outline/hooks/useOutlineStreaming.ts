@@ -11,19 +11,40 @@ const STREAM_RETRY_DELAY_MS = 1_000;
 
 
 
-export const useOutlineStreaming = (presentationId: string | null) => {
+export const useOutlineStreaming = (
+  presentationId: string | null,
+  enabled = true
+) => {
   const dispatch = useDispatch();
   const { outlines } = useSelector((state: RootState) => state.presentationGeneration);
-  const [isStreaming, setIsStreaming] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState<number | null>(null);
   const [highestActiveIndex, setHighestActiveIndex] = useState<number>(-1);
   const prevSlidesRef = useRef<{ content: string }[]>([]);
+  const outlinesRef = useRef<{ content: string }[]>(outlines);
   const activeIndexRef = useRef<number>(-1);
   const highestIndexRef = useRef<number>(-1);
 
   useEffect(() => {
-    if (!presentationId || outlines.length > 0) return;
+    outlinesRef.current = outlines;
+  }, [outlines]);
+
+  useEffect(() => {
+    const resetStreamingState = () => {
+      setIsStreaming(false);
+      setIsLoading(false);
+      setActiveSlideIndex(null);
+      setHighestActiveIndex(-1);
+      prevSlidesRef.current = [];
+      activeIndexRef.current = -1;
+      highestIndexRef.current = -1;
+    };
+
+    if (!enabled || !presentationId || outlinesRef.current.length > 0) {
+      resetStreamingState();
+      return;
+    }
 
     let eventSource: EventSource | null = null;
     let accumulatedChunks = "";
@@ -43,15 +64,6 @@ export const useOutlineStreaming = (presentationId: string | null) => {
         clearTimeout(retryTimer);
         retryTimer = null;
       }
-    };
-
-    const resetStreamingState = () => {
-      setIsStreaming(false);
-      setIsLoading(false);
-      setActiveSlideIndex(null);
-      setHighestActiveIndex(-1);
-      activeIndexRef.current = -1;
-      highestIndexRef.current = -1;
     };
 
     const scheduleRetry = (reason: string): boolean => {
@@ -211,7 +223,7 @@ export const useOutlineStreaming = (presentationId: string | null) => {
       closeEventSource();
       clearRetryTimer();
     };
-  }, [presentationId, dispatch]);
+  }, [presentationId, dispatch, enabled]);
 
   return { isStreaming, isLoading, activeSlideIndex, highestActiveIndex };
-}; 
+};
