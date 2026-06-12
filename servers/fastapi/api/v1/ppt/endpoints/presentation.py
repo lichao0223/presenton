@@ -30,6 +30,7 @@ from models.presentation_with_slides import (
 )
 from models.sql.template import TemplateModel
 from services.documents_loader import DocumentsLoader
+from services.temp_file_service import TEMP_FILE_SERVICE
 from services.webhook_service import WebhookService
 from services.image_generation_service import ImageGenerationService
 from services.mem0_presentation_memory_service import (
@@ -261,10 +262,15 @@ async def create_presentation(
         raise HTTPException(
             status_code=400,
             detail="Number of slides cannot be less than 3 if table of contents is included",
-        )
+    )
 
     presentation_id = uuid.uuid4()
     language_to_store = (language or "").strip()
+    validated_file_paths = (
+        TEMP_FILE_SERVICE.resolve_existing_temp_paths(file_paths)
+        if file_paths
+        else None
+    )
     # DB schema stores an int; 0 is used as internal marker for auto slide count.
     n_slides_to_store = n_slides if n_slides is not None else 0
 
@@ -273,7 +279,7 @@ async def create_presentation(
         content=content,
         n_slides=n_slides_to_store,
         language=language_to_store,
-        file_paths=file_paths,
+        file_paths=validated_file_paths,
         tone=tone.value,
         verbosity=verbosity.value,
         instructions=instructions,

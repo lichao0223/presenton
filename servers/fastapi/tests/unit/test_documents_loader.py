@@ -12,6 +12,7 @@ from services.documents_loader import (
     _unwrap_liteparse_json_line_if_stored,
     clean_extracted_document_text,
 )
+from services.temp_file_service import TEMP_FILE_SERVICE
 
 
 def test_unwrap_liteparse_json_line_extracts_text_field():
