@@ -88,7 +88,7 @@ const WebSearchProvider = ({
               Choose a provider to enable web search, or leave it disabled.
             </p>
           </div>
-          <div className="w-full max-w-[720px] space-y-4">
+          {isWebSearchEnabled && <div className="w-full max-w-[720px] space-y-4">
                 <div className="ml-auto w-[222px]">
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Provider
@@ -231,7 +231,7 @@ const WebSearchProvider = ({
                     />
                   </div>
                 )}
-          </div>
+          </div>}
         </div>
       </div>
     </div>

@@ -479,6 +479,176 @@ const PresentonMode = ({
 
         return null;
     };
+
+    const renderSelectedImageProviderConfig = () => {
+        if (!llmConfig.IMAGE_PROVIDER || !IMAGE_PROVIDERS[llmConfig.IMAGE_PROVIDER]) return null;
+
+        const provider = IMAGE_PROVIDERS[llmConfig.IMAGE_PROVIDER];
+
+        return (
+            <div className="col-span-full rounded-[10px] border border-[#EDEEEF] bg-[#FBFBFD] p-4 shadow-[0_12px_28px_rgba(16,19,35,0.04)]">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <p className="text-sm font-semibold text-[#191919]">{provider.label} setup</p>
+                        <p className="mt-1 text-xs leading-5 text-gray-500">
+                            Configure the selected image provider before continuing.
+                        </p>
+                    </div>
+                    {provider.getApiKeyUrl && (
+                        <a
+                            href={provider.getApiKeyUrl}
+                            target="_blank"
+                            className="flex shrink-0 items-center gap-1 rounded-full border border-[#EDEEEF] bg-white px-3 py-1.5 text-xs font-medium text-[#666666] transition-colors hover:border-[#D9D6FE] hover:text-[#7A5AF8]"
+                        >
+                            Get API Key <ArrowUpRight className="h-3.5 w-3.5" />
+                        </a>
+                    )}
+                </div>
+
+                <div className="space-y-4">
+                    {provider.value === "openai_compatible" ? (
+                        <OpenAICompatibleImageFields
+                            layout="stacked"
+                            baseUrl={llmConfig.OPENAI_COMPAT_IMAGE_BASE_URL || ""}
+                            apiKey={llmConfig.OPENAI_COMPAT_IMAGE_API_KEY || ""}
+                            model={llmConfig.OPENAI_COMPAT_IMAGE_MODEL || ""}
+                            onBaseUrlChange={(v) =>
+                                setLlmConfig((prev) => ({
+                                    ...prev,
+                                    OPENAI_COMPAT_IMAGE_BASE_URL: v,
+                                }))
+                            }
+                            onApiKeyChange={(v) =>
+                                setLlmConfig((prev) => ({
+                                    ...prev,
+                                    OPENAI_COMPAT_IMAGE_API_KEY: v,
+                                }))
+                            }
+                            onModelChange={(v) =>
+                                setLlmConfig((prev) => ({
+                                    ...prev,
+                                    OPENAI_COMPAT_IMAGE_MODEL: v,
+                                }))
+                            }
+                        />
+                    ) : provider.value === "comfyui" ? (
+                        <>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    ComfyUI Server URL
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="http://192.168.1.7:8188"
+                                    className="h-12 w-full rounded-lg border border-gray-300 px-4 py-2.5 outline-none transition-colors focus:border-[#7A5AF8] focus:ring-2 focus:ring-[#7A5AF8]/20"
+                                    value={llmConfig.COMFYUI_URL || ""}
+                                    onChange={(e) => {
+                                        setLlmConfig(prev => ({
+                                            ...prev,
+                                            COMFYUI_URL: e.target.value
+                                        }));
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Workflow JSON
+                                </label>
+                                <textarea
+                                    placeholder='Paste your ComfyUI workflow JSON here (export via "Export (API)" in ComfyUI)'
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 font-mono text-xs outline-none transition-colors focus:border-[#7A5AF8] focus:ring-2 focus:ring-[#7A5AF8]/20"
+                                    rows={3}
+                                    value={llmConfig.COMFYUI_WORKFLOW || ""}
+                                    onChange={(e) => {
+                                        setLlmConfig((prev) => ({
+                                            ...prev,
+                                            COMFYUI_WORKFLOW: e.target.value
+                                        }));
+                                    }}
+                                />
+                            </div>
+                        </>
+                    ) : provider.value === "open_webui" ? (
+                        <>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Open WebUI URL
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="http://localhost:3000/api/v1"
+                                    className="h-12 w-full rounded-lg border border-gray-300 px-4 py-2.5 outline-none transition-colors focus:border-[#7A5AF8] focus:ring-2 focus:ring-[#7A5AF8]/20"
+                                    value={llmConfig.OPEN_WEBUI_IMAGE_URL || ""}
+                                    onChange={(e) => {
+                                        setLlmConfig(prev => ({
+                                            ...prev,
+                                            OPEN_WEBUI_IMAGE_URL: e.target.value
+                                        }));
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    API Key (optional)
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showApiKey ? "text" : "password"}
+                                        placeholder="API key"
+                                        className="h-12 w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-12 outline-none transition-colors focus:border-[#7A5AF8] focus:ring-2 focus:ring-[#7A5AF8]/20"
+                                        value={llmConfig.OPEN_WEBUI_IMAGE_API_KEY || ""}
+                                        onChange={(e) => {
+                                            setLlmConfig(prev => ({
+                                                ...prev,
+                                                OPEN_WEBUI_IMAGE_API_KEY: e.target.value
+                                            }));
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowApiKey((prev) => !prev)}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer bg-white px-2 py-1"
+                                    >
+                                        {showApiKey ? <Eye className="h-4 w-4 text-gray-500" /> : <EyeOff className="h-4 w-4 text-gray-500" />}
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                                {provider.apiKeyFieldLabel}
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type={showApiKey ? "text" : "password"}
+                                    placeholder={`Enter your ${provider.apiKeyFieldLabel}`}
+                                    className="h-12 w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-12 outline-none transition-colors focus:border-[#7A5AF8] focus:ring-2 focus:ring-[#7A5AF8]/20"
+                                    value={getFieldValue(provider.apiKeyField)}
+                                    onChange={(e) => {
+                                        setLlmConfig((prev) => ({
+                                            ...prev,
+                                            [provider.apiKeyField as keyof LLMConfig]: e.target.value
+                                        }));
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowApiKey((prev) => !prev)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer bg-white px-2 py-1"
+                                >
+                                    {showApiKey ? <Eye className="h-4 w-4 text-gray-500" /> : <EyeOff className="h-4 w-4 text-gray-500" />}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {renderQualitySelector(llmConfig)}
+                </div>
+            </div>
+        );
+    };
+
     const checkCurrentAuthStatus = async () => {
         try {
             const res = await fetch(getApiUrl("/api/v1/ppt/codex/auth/status"));
@@ -665,6 +835,84 @@ const PresentonMode = ({
         (provider) => provider.value === llmConfig.WEB_SEARCH_PROVIDER
     );
 
+    const renderSelectedWebSearchProviderConfig = () => {
+        if (!selectedWebProvider) return null;
+
+        return (
+            <div className="col-span-full rounded-[10px] border border-[#EDEEEF] bg-[#FBFBFD] p-4 shadow-[0_12px_28px_rgba(16,19,35,0.04)]">
+                <div className="mb-4">
+                    <p className="text-sm font-semibold text-[#191919]">{selectedWebProvider.label} setup</p>
+                    <p className="mt-1 text-xs leading-5 text-gray-500">
+                        {selectedWebProvider.description}
+                    </p>
+                </div>
+
+                <div className="space-y-4">
+                    {selectedWebProvider.value === "auto" && (
+                        <div className="rounded-lg border border-[#D9D6FE] bg-[#F4F3FF] p-3 text-xs leading-5 text-[#5146E5]">
+                            Presenton will use model-native web grounding when available. If the selected text model does not support it, web search stays off until you choose an external provider.
+                        </div>
+                    )}
+
+                    {selectedWebProvider.urlField && (
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                                {selectedWebProvider.urlLabel}
+                            </label>
+                            <input
+                                type="url"
+                                value={getFieldValue(selectedWebProvider.urlField)}
+                                onChange={(event) => setLlmConfig(prev => ({ ...prev, [selectedWebProvider.urlField!]: event.target.value }))}
+                                className="h-12 w-full rounded-lg border border-gray-300 px-4 outline-none transition-colors focus:border-[#7A5AF8] focus:ring-2 focus:ring-[#7A5AF8]/20"
+                                placeholder="https://search.example.com"
+                            />
+                        </div>
+                    )}
+
+                    {selectedWebProvider.apiKeyField && (
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                                {selectedWebProvider.apiKeyLabel}
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type={showApiKey ? "text" : "password"}
+                                    value={getFieldValue(selectedWebProvider.apiKeyField)}
+                                    onChange={(event) => setLlmConfig(prev => ({ ...prev, [selectedWebProvider.apiKeyField!]: event.target.value }))}
+                                    className="h-12 w-full rounded-lg border border-gray-300 px-4 pr-12 outline-none transition-colors focus:border-[#7A5AF8] focus:ring-2 focus:ring-[#7A5AF8]/20"
+                                    placeholder={`Enter your ${selectedWebProvider.apiKeyLabel}`}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowApiKey(prev => !prev)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer bg-white px-2 py-1"
+                                >
+                                    {showApiKey ? <Eye className="h-4 w-4 text-gray-500" /> : <EyeOff className="h-4 w-4 text-gray-500" />}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {selectedWebProvider.value !== "auto" && (
+                        <div>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                                Maximum results
+                            </label>
+                            <input
+                                type="number"
+                                min={1}
+                                max={10}
+                                value={llmConfig.WEB_SEARCH_MAX_RESULTS || "5"}
+                                onChange={(event) => setLlmConfig(prev => ({ ...prev, WEB_SEARCH_MAX_RESULTS: event.target.value }))}
+                                className="h-12 w-full rounded-lg border border-gray-300 px-4 outline-none transition-colors focus:border-[#7A5AF8] focus:ring-2 focus:ring-[#7A5AF8]/20"
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     useEffect(() => {
         llmConfigRef.current = llmConfig;
     }, [llmConfig]);
@@ -728,6 +976,24 @@ const PresentonMode = ({
         }
     }, [textProviderTab, llmConfig.LLM]);
 
+    const imageProviderRows = Object.values(IMAGE_PROVIDERS).reduce(
+        (rows, provider, index) => {
+            if (index % 3 === 0) rows.push([]);
+            rows[rows.length - 1].push(provider);
+            return rows;
+        },
+        [] as Array<Array<(typeof IMAGE_PROVIDERS)[keyof typeof IMAGE_PROVIDERS]>>
+    );
+
+    const webSearchProviderRows = WEB_SEARCH_PROVIDER_OPTIONS.reduce(
+        (rows, provider, index) => {
+            if (index % 3 === 0) rows.push([]);
+            rows[rows.length - 1].push(provider);
+            return rows;
+        },
+        [] as Array<Array<(typeof WEB_SEARCH_PROVIDER_OPTIONS)[number]>>
+    );
+
     return (
         <div className='w-full max-w-[660px] font-syne pb-10'>
             <p className='px-2.5 py-0.5 w-fit text-[#7A5AF8] rounded-[50px]  border border-[#EDEEEF] text-[10px] font-medium mb-5 font-syne'>PRESENTON</p>
@@ -775,16 +1041,16 @@ const PresentonMode = ({
                     onValueChange={handleTextProviderTabChange}
                     className="w-full"
                 >
-                    <TabsList className="grid h-14 w-full grid-cols-3 bg-[#F6F6F9] p-1">
-                        <TabsTrigger value="chatgpt" className="h-12 gap-2 px-4 text-sm font-semibold">
+                    <TabsList className="grid h-14 w-full grid-cols-3 rounded-[10px] border border-[#EDEEEF] bg-[#F6F6F9] p-1 shadow-inner shadow-black/[0.02]">
+                        <TabsTrigger value="chatgpt" className="h-12 gap-2 rounded-[8px] border border-transparent px-4 text-sm font-semibold text-[#5F6062] transition-all hover:text-[#191919] data-[state=active]:border-[#D9D6FE] data-[state=active]:bg-white data-[state=active]:text-[#191919] data-[state=active]:shadow-[0_8px_24px_rgba(16,19,35,0.08)]">
                             <Image src="/providers/openai.png" alt="" width={16} height={16} className="object-contain" />
                             ChatGPT
                         </TabsTrigger>
-                        <TabsTrigger value="local" className="h-12 gap-2 px-4 text-sm font-semibold">
+                        <TabsTrigger value="local" className="h-12 gap-2 rounded-[8px] border border-transparent px-4 text-sm font-semibold text-[#5F6062] transition-all hover:text-[#191919] data-[state=active]:border-[#D9D6FE] data-[state=active]:bg-white data-[state=active]:text-[#191919] data-[state=active]:shadow-[0_8px_24px_rgba(16,19,35,0.08)]">
                             <Laptop className="h-4 w-4" />
                             Local
                         </TabsTrigger>
-                        <TabsTrigger value="other" className="h-12 gap-2 px-4 text-sm font-semibold">
+                        <TabsTrigger value="other" className="h-12 gap-2 rounded-[8px] border border-transparent px-4 text-sm font-semibold text-[#5F6062] transition-all hover:text-[#191919] data-[state=active]:border-[#D9D6FE] data-[state=active]:bg-white data-[state=active]:text-[#191919] data-[state=active]:shadow-[0_8px_24px_rgba(16,19,35,0.08)]">
                             <Blocks className="h-4 w-4" />
                             AI Providers
                         </TabsTrigger>
@@ -1275,167 +1541,48 @@ const PresentonMode = ({
                                 Select Image Provider
                             </label>
                             <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3">
-                                {Object.values(IMAGE_PROVIDERS).map((provider) => (
-                                    <button
-                                        type="button"
-                                        key={provider.value}
-                                        onClick={() => {
-                                            trackEvent(MixpanelEvent.Onboarding_Image_Provider_Selected, {
-                                                image_provider: provider.value,
-                                                image_provider_label: provider.label,
-                                            });
-                                            setLlmConfig(prev => ({ ...prev, IMAGE_PROVIDER: provider.value }));
-                                        }}
-                                        className={cn(
-                                            "flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors hover:bg-[#F7F6F9]",
-                                            llmConfig.IMAGE_PROVIDER === provider.value
-                                                ? "border-[#7A5AF8] bg-[#F4F3FF]"
-                                                : "border-[#EDEEEF] bg-white"
-                                        )}
-                                    >
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#EDEEEF] bg-white">
-                                            {provider.icon
-                                                ? <img src={provider.icon} alt="" className="h-7 w-7 object-contain" />
-                                                : <span className="text-sm font-semibold">{provider.label.slice(0, 1)}</span>}
-                                        </span>
-                                        <span className="text-xs font-semibold text-[#191919]">{provider.label}</span>
-                                    </button>
+                                {imageProviderRows.map((row, rowIndex) => (
+                                    <React.Fragment key={`image-provider-row-${rowIndex}`}>
+                                        {row.map((provider) => (
+                                            <button
+                                                type="button"
+                                                key={provider.value}
+                                                onClick={() => {
+                                                    trackEvent(MixpanelEvent.Onboarding_Image_Provider_Selected, {
+                                                        image_provider: provider.value,
+                                                        image_provider_label: provider.label,
+                                                    });
+                                                    setLlmConfig(prev => ({ ...prev, IMAGE_PROVIDER: provider.value }));
+                                                }}
+                                                className={cn(
+                                                    "group flex min-h-24 flex-col items-center justify-center gap-2 rounded-[10px] border p-3 text-center transition-all hover:border-[#D9D6FE] hover:bg-[#F7F6F9]",
+                                                    llmConfig.IMAGE_PROVIDER === provider.value
+                                                        ? "border-[#7A5AF8] bg-[#F4F3FF] shadow-[0_10px_24px_rgba(122,90,248,0.12)]"
+                                                        : "border-[#EDEEEF] bg-white"
+                                                )}
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        "flex h-10 w-10 items-center justify-center rounded-lg border bg-white transition-colors",
+                                                        llmConfig.IMAGE_PROVIDER === provider.value
+                                                            ? "border-[#D9D6FE]"
+                                                            : "border-[#EDEEEF] group-hover:border-[#D9D6FE]"
+                                                    )}
+                                                >
+                                                    {provider.icon
+                                                        ? <img src={provider.icon} alt="" className="h-7 w-7 object-contain" />
+                                                        : <span className="text-sm font-semibold">{provider.label.slice(0, 1)}</span>}
+                                                </span>
+                                                <span className="text-xs font-semibold text-[#191919]">{provider.label}</span>
+                                            </button>
+                                        ))}
+                                        {row.some((provider) => provider.value === llmConfig.IMAGE_PROVIDER) && renderSelectedImageProviderConfig()}
+                                    </React.Fragment>
                                 ))}
                             </div>
                         </div>
-
-
-
-                        {/* Dynamic API Key Input for Image Provider */}
-                        {llmConfig.IMAGE_PROVIDER &&
-                            IMAGE_PROVIDERS[llmConfig.IMAGE_PROVIDER] &&
-                            (() => {
-                                const provider = IMAGE_PROVIDERS[llmConfig.IMAGE_PROVIDER];
-
-                                if (provider.value === "openai_compatible") {
-                                    return (
-                                        <OpenAICompatibleImageFields
-                                            layout="stacked"
-                                            baseUrl={llmConfig.OPENAI_COMPAT_IMAGE_BASE_URL || ""}
-                                            apiKey={llmConfig.OPENAI_COMPAT_IMAGE_API_KEY || ""}
-                                            model={llmConfig.OPENAI_COMPAT_IMAGE_MODEL || ""}
-                                            onBaseUrlChange={(v) =>
-                                                setLlmConfig((prev) => ({
-                                                    ...prev,
-                                                    OPENAI_COMPAT_IMAGE_BASE_URL: v,
-                                                }))
-                                            }
-                                            onApiKeyChange={(v) =>
-                                                setLlmConfig((prev) => ({
-                                                    ...prev,
-                                                    OPENAI_COMPAT_IMAGE_API_KEY: v,
-                                                }))
-                                            }
-                                            onModelChange={(v) =>
-                                                setLlmConfig((prev) => ({
-                                                    ...prev,
-                                                    OPENAI_COMPAT_IMAGE_MODEL: v,
-                                                }))
-                                            }
-                                        />
-                                    );
-                                }
-
-                                // Show ComfyUI configuration
-                                if (provider.value === "comfyui") {
-                                    return (
-                                        <div className=" space-y-4 w-full">
-                                            <div className=''>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    ComfyUI Server URL
-                                                </label>
-                                                <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="http://192.168.1.7:8188"
-                                                        className="w-full px-4 py-2.5 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                                                        value={llmConfig.COMFYUI_URL || ""}
-                                                        onChange={(e) => {
-                                                            setLlmConfig(prev => ({
-                                                                ...prev,
-                                                                COMFYUI_URL: e.target.value
-                                                            }));
-                                                        }}
-                                                    />
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-                                    );
-                                }
-
-                                // Show API key input for other providers
-                                return (
-                                    <div className="w-full ">
-                                        <div className='flex items-center justify-between mb-2'>
-
-                                            <label className="block text-sm font-medium text-gray-700">
-                                                {provider.apiKeyFieldLabel}
-                                            </label>
-                                            {provider.getApiKeyUrl && <a href={provider.getApiKeyUrl || ""} target='_blank' className='text-[#666666] text-xs font-normal flex items-center gap-1'>Get API Key <ArrowUpRight className='w-3.5 h-3.5' /></a>}
-                                        </div>
-                                        <div className="relative">
-                                            <input
-                                                type={showApiKey ? 'text' : 'password'}
-                                                placeholder={`Enter your ${provider.apiKeyFieldLabel}`}
-                                                className="w-full px-4 py-2.5 h-12 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-                                                value={getFieldValue(provider.apiKeyField)}
-                                                onChange={(e) => {
-                                                    setLlmConfig((prev) => ({
-                                                        ...prev,
-                                                        [provider.apiKeyField as keyof LLMConfig]: e.target.value
-                                                    }))
-                                                }
-
-                                                }
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowApiKey((prev) => !prev)}
-                                                className='absolute right-2 top-1/2 -translate-y-1/2 bg-white px-2 py-1 cursor-pointer'
-                                            >
-                                                {showApiKey ? <Eye className='w-4 h-4 text-gray-500' /> : <EyeOff className='w-4 h-4 text-gray-500' />}
-                                            </button>
-                                        </div>
-
-                                    </div>
-                                );
-                            })()}
-
                     </div>
                 )}
-                {!llmConfig.DISABLE_IMAGE_GENERATION && <div className='flex flex-col justify-end items-center mt-[18px]'>
-                    <div className='w-full flex items-center gap-4'>
-
-                        {renderQualitySelector(llmConfig)}
-                    </div>
-                    {llmConfig.IMAGE_PROVIDER === "comfyui" && <div className='w-full'>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Workflow JSON
-                        </label>
-                        <div className="relative">
-                            <textarea
-                                placeholder='Paste your ComfyUI workflow JSON here (export via "Export (API)" in ComfyUI)'
-                                className="w-full px-4 py-2.5 outline-none border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors font-mono text-xs"
-                                rows={3}
-                                value={llmConfig.COMFYUI_WORKFLOW || ""}
-                                onChange={(e) => {
-                                    setLlmConfig((prev) => ({
-                                        ...prev,
-                                        COMFYUI_WORKFLOW: e.target.value
-                                    }))
-                                }}
-                            />
-                        </div>
-
-                    </div>}
-                </div>}
             </div>
             </>}
 
@@ -1472,78 +1619,49 @@ const PresentonMode = ({
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700">Select Web Search Provider</label>
                                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                    {WEB_SEARCH_PROVIDER_OPTIONS.map((provider) => (
-                                        <button
-                                            type="button"
-                                            key={provider.value}
-                                            onClick={() => {
-                                                trackEvent(MixpanelEvent.Onboarding_Web_Search_Provider_Selected, {
-                                                    web_search_provider: provider.value,
-                                                    web_search_provider_label: provider.label,
-                                                });
-                                                setLlmConfig(prev => ({
-                                                    ...prev,
-                                                    WEB_GROUNDING: true,
-                                                    WEB_SEARCH_PROVIDER: provider.value,
-                                                }));
-                                            }}
-                                            className={cn(
-                                                "flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center transition-colors hover:bg-[#F7F6F9]",
-                                                selectedWebProvider?.value === provider.value
-                                                    ? "border-[#7A5AF8] bg-[#F4F3FF]"
-                                                    : "border-[#EDEEEF] bg-white"
-                                            )}
-                                        >
-                                            <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#EDEEEF] bg-white">
-                                                {provider.icon && <img src={provider.icon} alt="" className="h-7 w-7 object-contain" />}
-                                            </span>
-                                            <span className="text-xs font-semibold text-[#191919]">{provider.label}</span>
-                                            <span className="line-clamp-2 text-[10px] leading-4 text-gray-500">{provider.description}</span>
-                                        </button>
+                                    {webSearchProviderRows.map((row, rowIndex) => (
+                                        <React.Fragment key={`web-search-provider-row-${rowIndex}`}>
+                                            {row.map((provider) => (
+                                                <button
+                                                    type="button"
+                                                    key={provider.value}
+                                                    onClick={() => {
+                                                        trackEvent(MixpanelEvent.Onboarding_Web_Search_Provider_Selected, {
+                                                            web_search_provider: provider.value,
+                                                            web_search_provider_label: provider.label,
+                                                        });
+                                                        setLlmConfig(prev => ({
+                                                            ...prev,
+                                                            WEB_GROUNDING: true,
+                                                            WEB_SEARCH_PROVIDER: provider.value,
+                                                        }));
+                                                    }}
+                                                    className={cn(
+                                                        "group flex min-h-32 flex-col items-center justify-center gap-2 rounded-[10px] border p-3 text-center transition-all hover:border-[#D9D6FE] hover:bg-[#F7F6F9]",
+                                                        selectedWebProvider?.value === provider.value
+                                                            ? "border-[#7A5AF8] bg-[#F4F3FF] shadow-[0_10px_24px_rgba(122,90,248,0.12)]"
+                                                            : "border-[#EDEEEF] bg-white"
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            "flex h-10 w-10 items-center justify-center rounded-lg border bg-white transition-colors",
+                                                            selectedWebProvider?.value === provider.value
+                                                                ? "border-[#D9D6FE]"
+                                                                : "border-[#EDEEEF] group-hover:border-[#D9D6FE]"
+                                                        )}
+                                                    >
+                                                        {provider.icon && <img src={provider.icon} alt="" className="h-7 w-7 object-contain" />}
+                                                    </span>
+                                                    <span className="text-xs font-semibold text-[#191919]">{provider.label}</span>
+                                                    <span className="line-clamp-2 text-[10px] leading-4 text-gray-500">{provider.description}</span>
+                                                </button>
+                                            ))}
+                                            {row.some((provider) => provider.value === selectedWebProvider?.value) && renderSelectedWebSearchProviderConfig()}
+                                        </React.Fragment>
                                     ))}
                                 </div>
                             </div>
-                            {selectedWebProvider?.urlField && (
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">{selectedWebProvider.urlLabel}</label>
-                                    <input
-                                        type="url"
-                                        value={getFieldValue(selectedWebProvider.urlField)}
-                                        onChange={(event) => setLlmConfig(prev => ({ ...prev, [selectedWebProvider.urlField!]: event.target.value }))}
-                                        className="h-12 w-full rounded-lg border border-gray-300 px-4 outline-none focus:border-blue-500"
-                                        placeholder="https://search.example.com"
-                                    />
-                                </div>
-                            )}
-                            {selectedWebProvider?.apiKeyField && (
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">{selectedWebProvider.apiKeyLabel}</label>
-                                    <div className="relative">
-                                        <input
-                                            type={showApiKey ? "text" : "password"}
-                                            value={getFieldValue(selectedWebProvider.apiKeyField)}
-                                            onChange={(event) => setLlmConfig(prev => ({ ...prev, [selectedWebProvider.apiKeyField!]: event.target.value }))}
-                                            className="h-12 w-full rounded-lg border border-gray-300 px-4 pr-12 outline-none focus:border-blue-500"
-                                        />
-                                        <button type="button" onClick={() => setShowApiKey(prev => !prev)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                                            {showApiKey ? <Eye className="h-4 w-4 text-gray-500" /> : <EyeOff className="h-4 w-4 text-gray-500" />}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                            {selectedWebProvider && selectedWebProvider.value !== "auto" && (
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Maximum results</label>
-                                    <input
-                                        type="number"
-                                        min={1}
-                                        max={10}
-                                        value={llmConfig.WEB_SEARCH_MAX_RESULTS || "5"}
-                                        onChange={(event) => setLlmConfig(prev => ({ ...prev, WEB_SEARCH_MAX_RESULTS: event.target.value }))}
-                                        className="h-12 w-full rounded-lg border border-gray-300 px-4 outline-none focus:border-blue-500"
-                                    />
-                                </div>
-                            )}
                         </div>}
                 </div>
             )}
