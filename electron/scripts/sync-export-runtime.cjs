@@ -37,12 +37,14 @@ async function getTargetVersion() {
 
 function getPlatformAssetName() {
   const platformArch = `${process.platform}-${process.arch}`;
+  if (platformArch === "linux-arm64") return "export-Linux-ARM64.zip";
   if (platformArch === "linux-x64") return "export-Linux-X64.zip";
   if (platformArch === "darwin-arm64") return "export-macOS-ARM64.zip";
+  if (platformArch === "darwin-x64") return "export-macOS-X64.zip";
   if (platformArch === "win32-x64") return "export-Windows-X64.zip";
 
   throw new Error(
-    `Unsupported export runtime platform: ${platformArch}. Supported: linux-x64, darwin-arm64, win32-x64`
+    `Unsupported export runtime platform: ${platformArch}. Supported: linux-arm64, linux-x64, darwin-arm64, darwin-x64, win32-x64`
   );
 }
 

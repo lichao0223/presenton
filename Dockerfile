@@ -48,6 +48,8 @@ FROM node:20-bookworm-slim AS assets-builder
 
 WORKDIR /app
 
+ARG TARGETARCH
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates unzip \
     && rm -rf /var/lib/apt/lists/*
@@ -62,8 +64,8 @@ COPY electron/resources/document-extraction/liteparse_runner.mjs /app/document-e
 COPY scripts/sync-presentation-export.cjs /app/scripts/sync-presentation-export.cjs
 # Bundled export still loads @img/sharp-* native addons from node_modules (not inlined).
 RUN rm -rf /app/presentation-export \
-    && node /app/scripts/sync-presentation-export.cjs --force \
-    && chmod +x /app/presentation-export/py/convert-linux-x64 \
+    && EXPORT_RUNTIME_ARCH="${TARGETARCH}" node /app/scripts/sync-presentation-export.cjs --force \
+    && find /app/presentation-export/py -maxdepth 1 -type f -name "convert-linux-*" -exec chmod +x {} \; \
     && cd /app/presentation-export \
     && npm init -y \
     && npm install "sharp@^0.34.5" --include=optional --omit=dev --no-fund --no-audit --no-package-lock
@@ -74,13 +76,14 @@ FROM python:3.11-slim-trixie AS runtime
 WORKDIR /app
 
 ARG INSTALL_TESSERACT=true
+ARG TARGETARCH
 
 # LiteParse uses Node + @llamaindex/liteparse (same runner as Electron); OCR uses Tesseract.
 ENV APP_DATA_DIRECTORY=/app_data \
     TEMP_DIRECTORY=/tmp/presenton \
     EXPORT_PACKAGE_ROOT=/app/presentation-export \
     EXPORT_RUNTIME_DIR=/app/presentation-export \
-    BUILT_PYTHON_MODULE_PATH=/app/presentation-export/py/convert-linux-x64 \
+    BUILT_PYTHON_MODULE_PATH=/app/presentation-export/py/convert-linux-current \
     PRESENTON_APP_ROOT=/app \
     HF_HOME=/root/.cache/huggingface \
     PRESENTON_FASTEMBED_ICON_CACHE_DIR=/root/.cache/presenton/fastembed-icons \
@@ -117,6 +120,18 @@ COPY --from=assets-builder /app/package.json /app/package.json
 COPY --from=assets-builder /app/document-extraction-liteparse /app/document-extraction-liteparse
 COPY --from=assets-builder /app/presentation-export /app/presentation-export
 COPY --from=assets-builder /app/scripts/sync-presentation-export.cjs /app/scripts/sync-presentation-export.cjs
+
+RUN set -eux; \
+    if [ -z "${TARGETARCH:-}" ]; then TARGETARCH="$(dpkg --print-architecture)"; fi; \
+    case "$TARGETARCH" in \
+      amd64) export_arch="x64" ;; \
+      arm64) export_arch="arm64" ;; \
+      *) echo "Unsupported TARGETARCH: $TARGETARCH" && exit 1 ;; \
+    esac; \
+    test -f "/app/presentation-export/py/convert-linux-${export_arch}"; \
+    ln -sf "/app/presentation-export/py/convert-linux-${export_arch}" /app/presentation-export/py/convert-linux-current; \
+    chmod +x "/app/presentation-export/py/convert-linux-${export_arch}"; \
+    ls -lah /app/presentation-export/py
 
 COPY --from=nextjs-builder /app/servers/nextjs/.next-build/standalone/ /app/servers/nextjs/
 COPY --from=nextjs-builder /app/servers/nextjs/public /app/servers/nextjs/public
