@@ -1,12 +1,5 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { LanguageType, PresentationConfig } from "../type";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronUp, Languages } from "lucide-react";
 import {
   Command,
@@ -77,6 +70,7 @@ const SlideCountSelect: React.FC<{
   const [customInput, setCustomInput] = useState(
     value && !SLIDE_OPTIONS.includes(value as SlideOption) ? value : ""
   );
+  const isSelectingPresetRef = useRef(false);
 
   useEffect(() => {
     if (value && !SLIDE_OPTIONS.includes(value as SlideOption)) {
@@ -85,6 +79,12 @@ const SlideCountSelect: React.FC<{
       setCustomInput("");
     }
   }, [value]);
+
+  useEffect(() => {
+    if (!open) {
+      isSelectingPresetRef.current = false;
+    }
+  }, [open]);
 
   const sanitizeToPositiveInteger = (raw: string): string => {
     const digitsOnly = raw.replace(/\D+/g, "");
@@ -164,7 +164,11 @@ const SlideCountSelect: React.FC<{
                   applyCustomValue();
                 }
               }}
-              onBlur={applyCustomValue}
+              onBlur={() => {
+                if (!isSelectingPresetRef.current) {
+                  applyCustomValue();
+                }
+              }}
               placeholder="--"
               className="h-8 w-16 px-2 text-sm"
             />
@@ -179,9 +183,16 @@ const SlideCountSelect: React.FC<{
                   key={option}
                   value={`${option} slides`}
                   role="option"
+                  onPointerDownCapture={() => {
+                    isSelectingPresetRef.current = true;
+                  }}
+                  onMouseDownCapture={() => {
+                    isSelectingPresetRef.current = true;
+                  }}
                   onSelect={() => {
                     onValueChange(option);
                     setCustomInput("");
+                    isSelectingPresetRef.current = false;
                     onOpenChange(false);
                   }}
                   className="font-syne text-sm font-medium"

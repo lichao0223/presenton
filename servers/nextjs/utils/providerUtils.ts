@@ -179,6 +179,10 @@ export const changeProvider = (
 ): LLMConfig => {
   const newConfig = { ...currentConfig, LLM: provider };
 
+  if (provider === "ollama" && !newConfig.OLLAMA_URL?.trim()) {
+    newConfig.OLLAMA_URL = getDefaultOllamaUrl();
+  }
+
   // Auto Select appropriate image provider based on the text models
   if (provider === "openai") {
     newConfig.IMAGE_PROVIDER = "gpt-image-1.5";

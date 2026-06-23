@@ -93,7 +93,7 @@ export default function OllamaConfig({
       ]);
       setResolvedOllamaUrl(reachable.resolvedUrl);
 
-      if (requestedUrl && reachable.resolvedUrl !== requestedUrl) {
+      if (reachable.resolvedUrl !== requestedUrl) {
         onInputChange(reachable.resolvedUrl, "ollama_url");
       }
 
@@ -384,9 +384,9 @@ export default function OllamaConfig({
           }}
         />
         <p className="mt-2 text-sm text-gray-500">
-          Leave blank to use the default {defaultOllamaUrl}
+          Required for generation. Use {defaultOllamaUrl}
           {!isElectronRuntime
-            ? ". If Ollama runs in the same container, Presenton will try localhost when needed."
+            ? ", or click Check models to detect localhost when Ollama runs in the same container."
             : "."}
         </p>
         <Button

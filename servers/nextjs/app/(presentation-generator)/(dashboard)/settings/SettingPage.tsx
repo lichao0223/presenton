@@ -174,7 +174,7 @@ const SettingsPage = () => {
         ))
       ) {
         throw new Error(
-          `The selected model "${llmConfig.OLLAMA_MODEL}" is not available at ${llmConfig.OLLAMA_URL || "the default Ollama URL"}. Check models and select an available model.`
+          `The selected model "${llmConfig.OLLAMA_MODEL}" is not available at ${llmConfig.OLLAMA_URL}. Check models and select an available model.`
         );
       }
       await handleSaveLLMConfig(llmConfig);
@@ -283,7 +283,8 @@ const SettingsPage = () => {
       (llmConfig.LLM === "litellm" && !llmConfig.LITELLM_MODEL) ||
       (llmConfig.LLM === "lmstudio" && !llmConfig.LMSTUDIO_MODEL) ||
       (llmConfig.LLM === "anthropic" && !llmConfig.ANTHROPIC_MODEL) ||
-      (llmConfig.LLM === "ollama" && !llmConfig.OLLAMA_MODEL) ||
+      (llmConfig.LLM === "ollama" &&
+        (!llmConfig.OLLAMA_URL?.trim() || !llmConfig.OLLAMA_MODEL)) ||
       (llmConfig.LLM === "custom" && !llmConfig.CUSTOM_MODEL)
     ) {
       const currentUrl = window.location.href;

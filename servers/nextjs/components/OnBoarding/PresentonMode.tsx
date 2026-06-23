@@ -16,7 +16,7 @@ import { Select, SelectItem, SelectContent, SelectValue, SelectTrigger } from '.
 import { MixpanelEvent, trackEvent } from '@/utils/mixpanel';
 import { usePathname } from 'next/navigation';
 import { getLLMConfigValidationError, handleSaveLLMConfig } from '@/utils/storeHelpers';
-import { isOllamaModelAvailable } from '@/utils/providerUtils';
+import { getDefaultOllamaUrl, isOllamaModelAvailable } from '@/utils/providerUtils';
 import { getApiErrorMessage, getApiUrl } from '@/utils/api';
 import CodexConfig from '../CodexConfig';
 import { CODEX_MODELS } from '@/utils/codexModels';
@@ -93,6 +93,9 @@ const PresentonMode = ({
         setLlmConfig(prev => ({
             ...prev,
             LLM: provider,
+            ...(provider === "ollama" && !prev.OLLAMA_URL?.trim()
+                ? { OLLAMA_URL: getDefaultOllamaUrl() }
+                : {}),
         }));
         setOpenProviderSelect(false);
         setAvailableModels([]);

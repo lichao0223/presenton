@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { LLMConfig } from "@/types/llm_config";
 import { getApiErrorMessage, getApiUrl } from "@/utils/api";
 import { LLM_PROVIDERS } from "@/utils/providerConstants";
+import { getDefaultOllamaUrl } from "@/utils/providerUtils";
 import {
   Check,
   Loader2,
@@ -503,6 +504,9 @@ const TextProvider = ({ onInputChange, llmConfig }: OpenAIConfigProps) => {
                                     provider: value,
                                   });
                                   onInputChange(value, "LLM");
+                                  if (value === "ollama" && !llmConfig.OLLAMA_URL?.trim()) {
+                                    onInputChange(getDefaultOllamaUrl(), "OLLAMA_URL");
+                                  }
                                   setOpenProviderSelect(false);
                                 }}
                               >
