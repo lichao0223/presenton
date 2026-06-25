@@ -4,6 +4,7 @@
 
 import React, { useEffect, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 
 
@@ -21,6 +22,7 @@ import { Step4TemplateCreation } from "./components/steps/Step4TemplateCreation"
 import { SaveLayoutButton } from "./components/SaveLayoutButton";
 import { SaveLayoutModal } from "./components/SaveLayoutModal";
 import { FileUploadSection } from "./components/FileUploadSection";
+import { validateLayoutCodeForClient } from "./utils/layoutCodeValidation";
 
 import { useFontLoader } from "../hooks/useFontLoad";
 import Header from "@/app/(presentation-generator)/(dashboard)/dashboard/components/Header";
@@ -137,11 +139,30 @@ const CustomTemplatePage = () => {
     /**
      * Save changes from schema editor
      */
-    const handleSchemaEditorSave = useCallback((updatedReact: string) => {
+    const handleSchemaEditorSave = useCallback(async (updatedReact: string) => {
         if (schemaEditorSlideIndex !== null) {
-            setSlides(prev => prev.map((s, i) =>
-                i === schemaEditorSlideIndex ? { ...s, react: updatedReact } : s
-            ));
+            try {
+                const validatedLayout = await validateLayoutCodeForClient(updatedReact);
+                setSlides(prev => prev.map((s, i) =>
+                    i === schemaEditorSlideIndex
+                        ? {
+                            ...s,
+                            react: validatedLayout.layout_code,
+                            layout_id: validatedLayout.layoutId,
+                            layout_name: validatedLayout.layoutName,
+                            layout_description: validatedLayout.layoutDescription,
+                        }
+                        : s
+                ));
+            } catch (error) {
+                toast.error("Invalid layout code", {
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : "The schema changes produced invalid TSX.",
+                });
+                return;
+            }
         }
         setSchemaEditorSlideIndex(null);
     }, [schemaEditorSlideIndex, setSlides]);

@@ -117,6 +117,36 @@ export interface CompiledLayout {
     schemaJSON: any;
 }
 
+function createInvalidCompiledLayout(message: string): CompiledLayout {
+    const InvalidLayout: React.ComponentType<{ data: any }> = () => (
+        React.createElement(
+            "div",
+            {
+                className:
+                    "relative w-full max-w-[1280px] max-h-[720px] aspect-video bg-white border border-red-200 text-red-700 flex items-center justify-center p-8 text-center",
+            },
+            React.createElement(
+                "div",
+                null,
+                React.createElement("div", { className: "text-lg font-semibold" }, "Invalid layout code"),
+                React.createElement("div", { className: "mt-2 text-sm text-red-600" }, message)
+            )
+        )
+    );
+    InvalidLayout.displayName = "InvalidCustomTemplateLayout";
+
+    const schema = z.object({});
+    return {
+        component: InvalidLayout,
+        layoutId: "invalid-layout",
+        layoutName: "Invalid Layout",
+        layoutDescription: "This custom layout code is invalid and must be regenerated or edited.",
+        schema,
+        sampleData: {},
+        schemaJSON: z.toJSONSchema(schema),
+    };
+}
+
 function isLikelyBackendAssetPath(value: string): boolean {
     if (!value) return false;
     if (value.startsWith("file://")) return true;
@@ -182,6 +212,10 @@ export function compileCustomLayout(layoutCode: string): CompiledLayout | null {
             .replace(/import\s+[\w$]+\s+from\s+['"]lucide-react['"];?\s*/g, "")
             // Remove other common imports we'll provide
             .replace(/import\s+.*\s+from\s+['"]@\/[^'"]+['"];?/g, "")
+            // Remove named exports; the runtime factory returns known bindings itself.
+            .replace(/export\s+(const|let|var|function)\s+/g, "$1 ")
+            .replace(/export\s*\{[\s\S]*?\};?\s*$/gm, "")
+            .replace(/export\s+default\s+function\s+(\w+)/g, "function $1")
             // Remove export default at the end (we'll handle it differently)
             .replace(/export\s+default\s+\w+;?\s*$/g, "");
 
@@ -249,7 +283,12 @@ export function compileCustomLayout(layoutCode: string): CompiledLayout | null {
 
         if (!result.component) {
             console.error("No component found in compiled code");
-            return null;
+            return createInvalidCompiledLayout("Missing dynamicSlideLayout component.");
+        }
+
+        if (!result.Schema) {
+            console.error("No Schema found in compiled code");
+            return createInvalidCompiledLayout("Missing Schema declaration.");
         }
 
         const wrappedComponent: React.ComponentType<{ data: any }> = ({ data, ...props }) => {
@@ -280,7 +319,9 @@ export function compileCustomLayout(layoutCode: string): CompiledLayout | null {
         };
     } catch (error) {
         console.error("Error compiling layout:", error);
-        return null;
+        const message =
+            error instanceof Error ? error.message : "The layout could not be compiled.";
+        return createInvalidCompiledLayout(message);
     }
 }
 

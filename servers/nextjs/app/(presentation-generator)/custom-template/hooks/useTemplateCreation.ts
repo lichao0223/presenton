@@ -13,7 +13,7 @@ import {
 } from "../types";
 import { getApiUrl } from "@/utils/api";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
-import { compileCustomLayout } from "@/app/hooks/compileLayout";
+import { validateLayoutCodeForClient } from "../utils/layoutCodeValidation";
 
 /** Must match `VISION_LAYOUT_ERROR_MARKER` in FastAPI `utils/template_vision_errors.py`. */
 const TEMPLATE_VISION_MODEL_MARKER = "TEMPLATE_VISION_MODEL_REQUIRED";
@@ -340,18 +340,14 @@ export const useTemplateCreation = () => {
                 );
             }
 
+            const validatedLayout = await validateLayoutCodeForClient(data.react_component);
             const layoutResult: SlideLayoutResponse = {
                 slide_index: slideIndex,
-                react_component: data.react_component,
-                layout_id: "",
-                layout_name: "",
+                react_component: validatedLayout.layout_code,
+                layout_id: validatedLayout.layoutId,
+                layout_name: validatedLayout.layoutName,
+                layout_description: validatedLayout.layoutDescription,
             };
-
-            if (!compileCustomLayout(layoutResult.react_component)) {
-                throw new Error(
-                    `Generated layout for slide ${slideIndex + 1} contains invalid TSX`
-                );
-            }
 
             // Update slide with the react component
             setSlides(prev => {
@@ -363,6 +359,7 @@ export const useTemplateCreation = () => {
                         react: layoutResult.react_component,
                         layout_id: layoutResult.layout_id || undefined,
                         layout_name: layoutResult.layout_name || undefined,
+                        layout_description: layoutResult.layout_description || undefined,
                     } : s
                 );
 
