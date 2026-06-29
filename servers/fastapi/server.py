@@ -11,17 +11,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--reload", type=str, default="false", help="Reload the server on code changes"
     )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="info",
+        help="Uvicorn log level",
+    )
     args = parser.parse_args()
     reload = args.reload == "true"
     host = "127.0.0.1"
 
     # Bind asset/base URL generation to the active runtime port (same env name as Next/Electron).
     os.environ["NEXT_PUBLIC_FAST_API"] = f"http://{host}:{args.port}"
-    
+
     uvicorn.run(
         "api.main:app",
         host=host,
         port=args.port,
-        log_level="info",
+        log_level=args.log_level,
         reload=reload,
     )

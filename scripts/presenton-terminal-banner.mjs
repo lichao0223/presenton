@@ -70,11 +70,13 @@ function padVis(styled, width) {
 
 /**
  * @param {object} [opts]
+ * @param {"development" | "production"} [opts.mode]
  * @param {number} [opts.nextPort]
  * @param {number} [opts.fastapiPort]
  * @param {string} [opts.hostHttpPort] — host-published HTTP port (docker -p HOST:80). Default from env or "5001".
  */
 export function printPresentonStartupBanner(opts = {}) {
+  const mode = opts.mode === "development" ? "development" : "production";
   const nextPort = opts.nextPort ?? 3000;
   const fastapiPort = opts.fastapiPort ?? 8000;
   const hostHttpPort =
@@ -96,11 +98,15 @@ export function printPresentonStartupBanner(opts = {}) {
   const title = [
     "",
     BOLD + fgRgb(138, 99, 255, "   Open Source AI Presentation Generator"),
-    "   " +
-      accent("Love the Project?  ") +
-      brand("Star us on github: ") +
-      BOLD +
-      fgRgb(224, 218, 255, "https://github.com/presenton/presenton"),
+    ...(mode === "development"
+      ? [
+          "   " +
+            accent("Love the Project?  ") +
+            brand("Star us on github: ") +
+            BOLD +
+            fgRgb(224, 218, 255, "https://github.com/presenton/presenton"),
+        ]
+      : []),
     muted("   ─────────────────────────────────────────────────────────"),
     "",
   ].join("\n");
@@ -108,30 +114,55 @@ export function printPresentonStartupBanner(opts = {}) {
   const W = 68;
   const pipe = (inner) => brand("  ║") + inner + brand("║");
 
+  const boxTop = brand(
+    "  ╔════════════════════════════════════════════════════════════════════╗",
+  );
+  const boxDivider = brand(
+    "  ╠════════════════════════════════════════════════════════════════════╣",
+  );
+  const boxBottom = brand(
+    "  ╚════════════════════════════════════════════════════════════════════╝",
+  );
+
+  const summaryLines =
+    mode === "development"
+      ? [
+          pipe(padVis("  " + BOLD + "Routing summary" + RESET, W)),
+          boxDivider,
+          pipe(padVis("  " + muted("Mode:                 ") + mode, W)),
+          pipe(padVis("  " + accent("/         ") + muted("→ Next.js"), W)),
+          pipe(padVis("  " + accent("/api/v1/  ") + muted("→ FastAPI"), W)),
+          pipe(padVis("  " + muted("Next.js docker URL: ") + nextUrl, W)),
+          pipe(padVis("  " + muted("FastAPI docker URL:     ") + apiUrl, W)),
+          pipe(
+            padVis(
+              "  " +
+                muted("Public URL (Ctrl+Click to open):     ") +
+                BOLD +
+                fgRgb(255, 255, 255, publicUrl),
+              W,
+            ),
+          ),
+        ]
+      : [
+          pipe(padVis("  " + BOLD + "Application URL" + RESET, W)),
+          boxDivider,
+          pipe(padVis("  " + muted("Mode:             ") + mode, W)),
+          pipe(
+            padVis(
+              "  " +
+                muted("Open Presenton:     ") +
+                BOLD +
+                fgRgb(255, 255, 255, publicUrl),
+              W,
+            ),
+          ),
+        ];
+
   const summary = [
-    brand(
-      "  ╔════════════════════════════════════════════════════════════════════╗",
-    ),
-    pipe(padVis("  " + BOLD + "Routing summary" + RESET, W)),
-    brand(
-      "  ╠════════════════════════════════════════════════════════════════════╣",
-    ),
-    pipe(padVis("  " + accent("/         ") + muted("→ Next.js"), W)),
-    pipe(padVis("  " + accent("/api/v1/  ") + muted("→ FastAPI"), W)),
-    pipe(padVis("  " + muted("Next.js docker URL: ") + nextUrl, W)),
-    pipe(padVis("  " + muted("FastAPI docker URL:     ") + apiUrl, W)),
-    pipe(
-      padVis(
-        "  " +
-          muted("Public URL (Ctrl+Click to open):     ") +
-          BOLD +
-          fgRgb(255, 255, 255, publicUrl),
-        W,
-      ),
-    ),
-    brand(
-      "  ╚════════════════════════════════════════════════════════════════════╝",
-    ),
+    boxTop,
+    ...summaryLines,
+    boxBottom,
     "",
     "   " + muted("Made with ❤️  by the Presenton team"),
   ].join("\n");
