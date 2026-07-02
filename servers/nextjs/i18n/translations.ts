@@ -145,6 +145,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Discovering and loading layout components...":
       "正在发现并加载布局组件...",
     "Done": "完成",
+    "Drafting your presentation outline": "正在起草演示文稿大纲",
     "Edit": "编辑",
     "Edit content schema": "编辑内容结构",
     "Edit source code": "编辑源代码",
@@ -548,6 +549,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Web Search Settings": "联网搜索设置",
     "Web Search Provider": "联网搜索提供商",
     "Web search disabled": "联网搜索已关闭",
+    "Web research complete": "联网研究已完成",
     "Welcome on board!": "欢迎加入！",
     "Workflow JSON": "工作流 JSON",
     "What changes would you like? e.g., 'Make the title larger' or 'Change colors to blue theme'":
@@ -727,6 +729,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Search stock images": "搜索图库图片",
     "Searching slides for relevant content.": "正在搜索相关幻灯片内容。",
     "Searching…": "搜索中…",
+    "Searching with model-native web search and drafting outlines":
+      "正在使用模型原生联网搜索并起草大纲",
     "Schema checker": "结构检查器",
     "Shorten outline": "精简大纲",
     "Slide reader": "幻灯片读取器",
@@ -925,6 +929,12 @@ export function translateText(locale: Locale, text: string): string {
     if (webSummary) {
       const provider = translateText(locale, webSummary[1]);
       return `联网：${provider}`;
+    }
+
+    const outlineSearchStatus = text.match(/^Searching with (.+): (.+)$/);
+    if (outlineSearchStatus) {
+      const provider = translateText(locale, outlineSearchStatus[1]);
+      return `正在使用 ${provider} 搜索：${outlineSearchStatus[2]}`;
     }
   }
 
