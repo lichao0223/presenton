@@ -36,6 +36,14 @@ function extractSessionTokenFromCookieHeader(cookieHeader?: string): string | un
   return decodeURIComponent(match[1]);
 }
 
+function getExportFastApiUrl(): string {
+  return (
+    process.env.FAST_API_INTERNAL_URL?.trim() ||
+    process.env.NEXT_PUBLIC_FAST_API?.trim() ||
+    ""
+  ).replace(/\/+$/, "");
+}
+
 async function resolveExportEntrypoint(exportRoot: string): Promise<string> {
   const indexCjs = path.join(exportRoot, "index.cjs");
   const indexJs = path.join(exportRoot, "index.js");
@@ -209,7 +217,7 @@ async function runBundledPresentationExportLocked(params: {
   if (sessionToken) {
     q.set("exportSession", sessionToken);
   }
-  const fastapiUrl = process.env.NEXT_PUBLIC_FAST_API?.trim();
+  const fastapiUrl = getExportFastApiUrl();
   if (fastapiUrl) {
     q.set("fastapiUrl", fastapiUrl);
   }

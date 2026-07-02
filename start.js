@@ -405,6 +405,11 @@ const isOllamaInstalled = () =>
 
 const shouldStartOllama = () => isTruthyEnv(process.env.START_OLLAMA);
 
+const getFastApiLogLevel = () =>
+  (process.env.FASTAPI_LOG_LEVEL || process.env.LOG_LEVEL || (isDev ? "info" : "warning"))
+    .trim()
+    .toLowerCase();
+
 const ensureOllamaRuntime = async () => {
   if (!shouldStartOllama() || isOllamaInstalled()) {
     return;
@@ -468,7 +473,7 @@ const startServers = async (nginxReadyPromise) => {
       "--reload",
       isDev ? "true" : "false",
       "--log-level",
-      isDev ? "info" : "warning",
+      getFastApiLogLevel(),
     ],
     {
       cwd: fastapiDir,

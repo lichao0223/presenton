@@ -10,6 +10,8 @@ services:
       - ./app_data:/app_data
     environment:
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+      FASTAPI_LOG_LEVEL: ${FASTAPI_LOG_LEVEL:-INFO}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       MIGRATE_DATABASE_ON_STARTUP: ${MIGRATE_DATABASE_ON_STARTUP:-true}
       CAN_CHANGE_KEYS: ${CAN_CHANGE_KEYS:-}
       LLM: ${LLM:-}

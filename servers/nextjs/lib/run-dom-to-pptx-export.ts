@@ -41,6 +41,14 @@ const LANDPPT_DOM_TO_PPTX_BUNDLE_RELATIVE_PATH = path.join(
   "dom-to-pptx.bundle.js"
 );
 
+function getExportFastApiUrl(): string {
+  return (
+    process.env.FAST_API_INTERNAL_URL?.trim() ||
+    process.env.NEXT_PUBLIC_FAST_API?.trim() ||
+    ""
+  ).replace(/\/+$/, "");
+}
+
 function extractSessionTokenFromCookieHeader(cookieHeader?: string): string | undefined {
   if (!cookieHeader) {
     return undefined;
@@ -907,7 +915,7 @@ export async function runDomToPptxExport(params: {
     q.set("exportSession", sessionToken);
   }
 
-  const fastapiUrl = process.env.NEXT_PUBLIC_FAST_API?.trim();
+  const fastapiUrl = getExportFastApiUrl();
   if (fastapiUrl) {
     q.set("fastapiUrl", fastapiUrl);
   }

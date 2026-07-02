@@ -68,6 +68,10 @@ PRESENTON_HTTP_HOST_PORT=5001
 # 首次启动时自动迁移数据库
 MIGRATE_DATABASE_ON_STARTUP=true
 
+# 日志级别：INFO 可看到接口访问、生成进度；WARNING 只看告警和错误
+FASTAPI_LOG_LEVEL=INFO
+LOG_LEVEL=INFO
+
 # 是否允许在网页设置里修改模型 Key
 CAN_CHANGE_KEYS=true
 
