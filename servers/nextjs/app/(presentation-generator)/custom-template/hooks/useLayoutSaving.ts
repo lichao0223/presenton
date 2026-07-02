@@ -6,6 +6,7 @@ import { getHeader } from "@/app/(presentation-generator)/services/api/header";
 import { getApiUrl } from "@/utils/api";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
 import { validateLayoutCodeForClient } from "../utils/layoutCodeValidation";
+import { useI18n } from "@/i18n/I18nProvider";
 
 
 export const useLayoutSaving = (
@@ -13,6 +14,7 @@ export const useLayoutSaving = (
 
 
 ) => {
+  const { t } = useI18n();
   const [isSavingLayout, setIsSavingLayout] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -33,7 +35,7 @@ export const useLayoutSaving = (
 
   const saveLayout = useCallback(async (layoutName: string, description: string, template_info_id: string): Promise<string | null> => {
     if (!slides.length) {
-      notify.error("No slides to save", "Add at least one slide before saving the layout.");
+      notify.error(t("No slides to save"), t("Add at least one slide before saving the layout."));
       return null;
     }
 
@@ -82,12 +84,12 @@ export const useLayoutSaving = (
 
       const data = await ApiResponseHandler.handleResponse(
         saveResponse,
-        "Failed to save layout components"
+        t("Failed to save layout components")
       );
       if (!data) {
         notify.error(
-          "Could not save layout",
-          "Some layout components could not be saved. Please try again."
+          t("Could not save layout"),
+          t("Some layout components could not be saved. Please try again.")
         );
         return null;
       }
@@ -98,8 +100,8 @@ export const useLayoutSaving = (
       });
 
       notify.success(
-        "Layout saved",
-        `Layout "${layoutName}" was saved successfully.`
+        t("Layout saved"),
+        t(`Layout "${layoutName}" was saved successfully.`)
       );
       trackEvent(MixpanelEvent.CustomTemplate_Saved, {
         template_info_id,
@@ -113,16 +115,16 @@ export const useLayoutSaving = (
     } catch (error) {
       console.error("Error saving layout:", error);
       notify.error(
-        "Failed to save layout",
+        t("Failed to save layout"),
         error instanceof Error
           ? error.message
-          : "An unexpected error occurred"
+          : t("An unexpected error occurred")
       );
       return null;
     } finally {
       setIsSavingLayout(false);
     }
-  }, [slides, closeSaveModal]);
+  }, [slides, closeSaveModal, t]);
 
   return {
     isSavingLayout,

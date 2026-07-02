@@ -825,6 +825,18 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Improve introduction": "优化引言",
     "LOGO": "Logo",
     "Layout finder": "布局查找器",
+    "Layout saved": "布局已保存",
+    "Failed to save layout": "保存布局失败",
+    "Failed to save layout components": "保存布局组件失败",
+    "Could not save layout": "无法保存布局",
+    "No slides to save": "没有可保存的幻灯片",
+    "Add at least one slide before saving the layout.":
+      "保存布局前请至少添加一张幻灯片。",
+    "Some layout components could not be saved. Please try again.":
+      "部分布局组件未能保存，请重试。",
+    "Center Title Eyebrow Four Details": "居中标题眉题四项详情",
+    "A cover slide with a centered eyebrow, large title, divider line, and four centered detail items.":
+      "封面页版式：包含居中的眉题、大标题、分隔线和四个居中详情项。",
     "Merge similar slides": "合并相似幻灯片",
     "Present": "演示",
     "Presentation title": "演示文稿标题",
@@ -901,6 +913,142 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
   },
 };
 
+const zhLayoutTitleTerms: Record<string, string> = {
+  agenda: "议程",
+  analysis: "分析",
+  background: "背景",
+  bar: "条形图",
+  bullet: "要点",
+  bullets: "要点",
+  card: "卡片",
+  cards: "卡片",
+  centered: "居中",
+  center: "居中",
+  chart: "图表",
+  charts: "图表",
+  closing: "结束页",
+  column: "列",
+  columns: "列",
+  comparison: "对比",
+  contact: "联系信息",
+  content: "内容",
+  cover: "封面",
+  data: "数据",
+  description: "描述",
+  details: "详情",
+  detail: "详情",
+  divider: "分隔线",
+  eyebrow: "眉题",
+  footer: "页脚",
+  four: "四个",
+  grid: "网格",
+  header: "页眉",
+  hero: "主视觉",
+  icon: "图标",
+  icons: "图标",
+  image: "图片",
+  images: "图片",
+  index: "索引",
+  intro: "介绍",
+  left: "左侧",
+  list: "列表",
+  media: "媒体",
+  metric: "指标",
+  metrics: "指标",
+  multi: "多项",
+  numbered: "编号",
+  overview: "概览",
+  paragraph: "段落",
+  quote: "引用",
+  right: "右侧",
+  section: "章节",
+  sidebar: "侧边栏",
+  slide: "幻灯片",
+  split: "分栏",
+  stat: "统计",
+  stats: "统计",
+  subtitle: "副标题",
+  table: "表格",
+  team: "团队",
+  three: "三个",
+  timeline: "时间线",
+  title: "标题",
+  toc: "目录",
+  two: "两个",
+  visual: "视觉",
+  with: "带",
+};
+
+const zhLayoutDescriptionPhrases: Array<[RegExp, string]> = [
+  [/\bA cover slide with\b/gi, "封面页，包含"],
+  [/\bA slide with\b/gi, "幻灯片版式，包含"],
+  [/\bA layout featuring\b/gi, "版式特点为"],
+  [/\bA layout with\b/gi, "版式包含"],
+  [/\blarge title\b/gi, "大标题"],
+  [/\bcentered eyebrow\b/gi, "居中眉题"],
+  [/\bdivider line\b/gi, "分隔线"],
+  [/\bfour centered detail items\b/gi, "四个居中详情项"],
+  [/\btwo-column\b/gi, "双列"],
+  [/\bnumbered list\b/gi, "编号列表"],
+  [/\bbullet points\b/gi, "要点"],
+  [/\bsupporting image\b/gi, "辅助图片"],
+  [/\bright content\b/gi, "右侧内容"],
+  [/\bleft column\b/gi, "左侧栏"],
+  [/\btop bar\b/gi, "顶部栏"],
+  [/\bheader\b/gi, "页眉"],
+  [/\bdescription\b/gi, "描述"],
+  [/\bgrid\b/gi, "网格"],
+  [/\bcards\b/gi, "卡片"],
+  [/\btitle\b/gi, "标题"],
+  [/\bimage\b/gi, "图片"],
+  [/\band\b/gi, "和"],
+  [/\bwith\b/gi, "带"],
+];
+
+function translateLayoutTitleToZh(text: string): string | null {
+  const normalized = text.trim();
+  if (!normalized || normalized.length > 80) return null;
+  if (/[\u4e00-\u9fff]/.test(normalized)) return null;
+  if (!/^[A-Za-z0-9][A-Za-z0-9\s/&+-]*$/.test(normalized)) return null;
+
+  const words = normalized
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .split(/[\s/_-]+/)
+    .filter(Boolean);
+
+  if (words.length < 2) return null;
+
+  const translated = words.map((word) => {
+    const key = word.toLowerCase();
+    return zhLayoutTitleTerms[key] || word;
+  });
+
+  const translatedCount = translated.filter((word, index) => word !== words[index]).length;
+  if (translatedCount < Math.ceil(words.length / 2)) return null;
+
+  return translated.join("");
+}
+
+function translateLayoutDescriptionToZh(text: string): string | null {
+  const normalized = text.trim();
+  if (!normalized || normalized.length > 240) return null;
+  if (/[\u4e00-\u9fff]/.test(normalized)) return null;
+  if (!/^(A|An)\s.+\b(slide|layout)\b/i.test(normalized)) return null;
+
+  let translated = normalized;
+  for (const [pattern, replacement] of zhLayoutDescriptionPhrases) {
+    translated = translated.replace(pattern, replacement);
+  }
+
+  if (translated === normalized) return null;
+  return translated
+    .replace(/\s*,\s*/g, "，")
+    .replace(/\s*\.\s*$/g, "。")
+    .replace(/\s+/g, " ")
+    .replace(/\s([，。])/g, "$1")
+    .trim();
+}
+
 export function isSupportedLocale(value: string | null): value is Locale {
   return SUPPORTED_LOCALES.includes(value as Locale);
 }
@@ -934,6 +1082,15 @@ export function translateText(locale: Locale, text: string): string {
       const provider = translateText(locale, webSummary[1]);
       return `联网：${provider}`;
     }
+
+    const layoutSaved = text.match(/^Layout "(.+)" was saved successfully\.$/);
+    if (layoutSaved) return `布局“${layoutSaved[1]}”已成功保存。`;
+
+    const layoutTitle = translateLayoutTitleToZh(text);
+    if (layoutTitle) return layoutTitle;
+
+    const layoutDescription = translateLayoutDescriptionToZh(text);
+    if (layoutDescription) return layoutDescription;
 
     const outlineSearchStatus = text.match(/^Searching with (.+): (.+)$/);
     if (outlineSearchStatus) {

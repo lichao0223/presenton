@@ -194,10 +194,10 @@ const GroupLayoutPreview = () => {
                           {index + 1 < 10 ? `0${index + 1}` : index + 1}
                         </span>
                         <h3 className="text-xl font-semibold text-gray-900 mt-3">
-                          {template.layoutName}
+                          {t(template.layoutName)}
                         </h3>
                         <p className="text-sm text-gray-500 mt-1 ">
-                          {template.layoutDescription}
+                          {t(template.layoutDescription)}
                         </p>
                       </div>
                       {/* <div className="flex items-center gap-3">
@@ -239,10 +239,10 @@ const GroupLayoutPreview = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-xl font-semibold text-gray-900">
-                          {layout.rawLayoutName}
+                          {t(layout.rawLayoutName)}
                         </h3>
                         <p className="text-sm text-gray-500 mt-1 max-w-2xl">
-                          {layout.layoutDescription}
+                          {t(layout.layoutDescription)}
                         </p>
                       </div>
                     </div>
