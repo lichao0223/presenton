@@ -286,10 +286,10 @@ const UploadPage = () => {
   const handleDocumentProcessing = async () => {
     setLoadingState({
       isLoading: true,
-      message: "Processing documents...",
+      message: t("Processing documents..."),
       showProgress: true,
       duration: 90,
-      extra_info: files.length > 0 ? "It might take a few minutes for large documents." : "",
+      extra_info: files.length > 0 ? t("It might take a few minutes for large documents.") : "",
     });
 
     let documents = [];
@@ -333,7 +333,7 @@ const UploadPage = () => {
   const handleDirectPresentationGeneration = async () => {
     setLoadingState({
       isLoading: true,
-      message: "Preparing outline generation...",
+      message: t("Preparing outline generation..."),
       showProgress: true,
       duration: 30,
     });

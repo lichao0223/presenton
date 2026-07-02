@@ -219,6 +219,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Help": "帮助",
     "Help improve Presenton by sharing anonymous usage data.":
       "分享匿名使用数据，帮助改进 Presenton。",
+    "It might take a few minutes for large documents.":
+      "大型文档可能需要几分钟时间。",
     "Image Generation Settings": "生图设置",
     "Image API key": "生图 API 密钥",
     "Image Provider": "生图提供商",
@@ -349,6 +351,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Presentation (": "演示文稿（",
     "Preparing your workspace...": "正在准备工作区...",
     "Preparing your workspace…": "正在准备工作区…",
+    "Preparing outline generation...": "正在准备生成大纲...",
     "Preparing your presentation outline": "正在准备演示文稿大纲",
     "Presentation": "演示文稿",
     "Presentation deleted": "演示文稿已删除",
@@ -359,6 +362,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Preview generation failed": "预览生成失败",
     "Slides preview was generated successfully.": "幻灯片预览已成功生成。",
     "Processing": "处理中",
+    "Processing documents...": "正在处理文档...",
     "Processing slides": "正在处理幻灯片",
     "Processing...": "处理中...",
     "Pro": "专业版",
