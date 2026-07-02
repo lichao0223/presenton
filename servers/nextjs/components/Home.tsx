@@ -18,7 +18,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!canChangeKeys) {
-      router.push("/upload");
+      router.push("/dashboard");
     }
   }, [canChangeKeys, router]);
 

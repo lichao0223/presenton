@@ -116,8 +116,8 @@ export function ConfigurationInitializer({ children }: { children: React.ReactNo
           await checkIfSelectedDeepSeekModelIsAvailable(llmConfig);
         }
         if (route === '/') {
-          router.push('/upload');
-          setLoadingToFalseAfterNavigatingTo('/upload');
+          router.push('/dashboard');
+          setLoadingToFalseAfterNavigatingTo('/dashboard');
         } else {
           setIsLoading(false);
         }
@@ -129,8 +129,8 @@ export function ConfigurationInitializer({ children }: { children: React.ReactNo
       }
     } else {
       if (route === '/') {
-        router.push('/upload');
-        setLoadingToFalseAfterNavigatingTo('/upload');
+        router.push('/dashboard');
+        setLoadingToFalseAfterNavigatingTo('/dashboard');
       } else {
         setIsLoading(false);
       }
