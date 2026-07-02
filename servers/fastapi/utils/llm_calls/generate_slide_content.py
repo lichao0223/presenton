@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -23,6 +24,19 @@ from utils.schema_utils import (
 )
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _log_preview(value, limit: int = 1200) -> str:
+    if isinstance(value, str):
+        text = value
+    else:
+        try:
+            text = json.dumps(value, ensure_ascii=False)
+        except Exception:
+            text = str(value)
+    text = " ".join(text.split())
+    return text if len(text) <= limit else f"{text[:limit]}..."
+
 
 SLIDE_CONTENT_SYSTEM_PROMPT = """
 You will be given slide content and response schema.
@@ -204,6 +218,7 @@ async def _generate_custom_slide_content_fallback(
     messages: list[Message],
     response_schema: dict,
 ) -> dict:
+    started_at = time.perf_counter()
     schema_text = json.dumps(response_schema, ensure_ascii=False)
     base_instruction = (
         "The previous structured-output attempt failed. Return JSON only. "
@@ -215,6 +230,12 @@ async def _generate_custom_slide_content_fallback(
         model=model,
         messages=messages,
         instruction=base_instruction,
+    )
+    LOGGER.warning(
+        "Custom LLM slide fallback content received model=%s elapsed=%.2fs content=%r",
+        model,
+        time.perf_counter() - started_at,
+        _log_preview(content),
     )
     if not isinstance(content, dict):
         raise ValueError("Custom LLM slide fallback did not return a JSON object")
@@ -248,6 +269,13 @@ async def _generate_custom_slide_content_fallback(
             model=model,
             messages=messages,
             instruction=repair_instruction,
+        )
+        LOGGER.warning(
+            "Custom LLM slide repair content received model=%s repair_attempt=%s/3 elapsed=%.2fs content=%r",
+            model,
+            repair_attempt + 1,
+            time.perf_counter() - started_at,
+            _log_preview(repaired),
         )
         if not isinstance(repaired, dict):
             raise ValueError("Custom LLM slide repair did not return a JSON object")

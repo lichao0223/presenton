@@ -123,7 +123,7 @@ class ImageGenerationService:
         )
         prompt_preview = _log_preview(image_prompt)
         started_at = time.perf_counter()
-        logger.info(
+        logger.warning(
             "Image generation started provider=%s prompt=%r",
             provider_name,
             prompt_preview,
@@ -138,7 +138,7 @@ class ImageGenerationService:
                 )
             if image_path:
                 if image_path.startswith("http"):
-                    logger.info(
+                    logger.warning(
                         "Image generation completed provider=%s elapsed=%.2fs result=%s prompt=%r",
                         provider_name,
                         time.perf_counter() - started_at,
@@ -147,7 +147,7 @@ class ImageGenerationService:
                     )
                     return image_path
                 elif os.path.exists(image_path):
-                    logger.info(
+                    logger.warning(
                         "Image generation completed provider=%s elapsed=%.2fs result=%s prompt=%r",
                         provider_name,
                         time.perf_counter() - started_at,
@@ -165,7 +165,7 @@ class ImageGenerationService:
                 elif image_path.startswith("/app_data/") or image_path.startswith(
                     "/static/"
                 ):
-                    logger.info(
+                    logger.warning(
                         "Image generation completed provider=%s elapsed=%.2fs result=%s prompt=%r",
                         provider_name,
                         time.perf_counter() - started_at,

@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import random
+import time
 import traceback
 from typing import Annotated, List, Literal, Optional, Tuple
 import dirtyjson
@@ -97,6 +98,11 @@ logger = logging.getLogger(__name__)
 PRESENTATION_ROUTER = APIRouter(prefix="/presentation", tags=["Presentation"])
 PRESENTATION_STREAM_CHANNELS: dict[uuid.UUID, "PresentationStreamChannel"] = {}
 PRESENTATION_STREAM_CHANNELS_LOCK = asyncio.Lock()
+
+
+def _log_preview(value, limit: int = 500) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else f"{text[:limit]}..."
 
 
 class PresentationStreamChannel:
@@ -642,6 +648,7 @@ async def generate_presentation_stream_events(
     sql_session: AsyncSession,
     image_generation_service: ImageGenerationService,
 ):
+        generation_started_at = time.perf_counter()
         icon_weight = layout.icon_weight
         image_urls_for_slides = get_images_for_slides_from_outline(outline.slides)
 
@@ -650,8 +657,16 @@ async def generate_presentation_stream_events(
         asset_warnings_by_slide: dict[int, list[dict]] = {}
 
         async def notify_slide_assets_ready(slide_index: int, asset_task: asyncio.Task):
+            slide_asset_started_at = time.perf_counter()
             try:
-                await asset_task
+                generated_assets = await asset_task
+                logger.warning(
+                    "Slide asset generation completed: presentation_id=%s slide=%s elapsed=%.2fs assets=%s",
+                    presentation_id,
+                    slide_index + 1,
+                    time.perf_counter() - slide_asset_started_at,
+                    len(generated_assets or []),
+                )
             except Exception:
                 logger.exception(
                     "Slide asset generation failed: presentation_id=%s slide_index=%s",
@@ -669,6 +684,17 @@ async def generate_presentation_stream_events(
 
         slides: List[SlideModel] = []
         total_slides = len(structure.slides)
+        logger.warning(
+            "Presentation stream generation started: presentation_id=%s slides=%s layout=%s image_provider=%s",
+            presentation_id,
+            total_slides,
+            layout.name,
+            (
+                getattr(image_generation_service.image_gen_func, "__name__", None)
+                if image_generation_service.image_gen_func
+                else "disabled"
+            ),
+        )
         yield SSEProgressResponse(current=0, total=total_slides).to_string()
         yield SSEResponse(
             event="response",
@@ -678,6 +704,15 @@ async def generate_presentation_stream_events(
 
         for i, slide_layout_index in enumerate(structure.slides):
             slide_layout = layout.slides[slide_layout_index]
+            slide_started_at = time.perf_counter()
+            logger.warning(
+                "Slide content generation started: presentation_id=%s slide=%s/%s layout=%s outline=%r",
+                presentation_id,
+                i + 1,
+                total_slides,
+                slide_layout.id,
+                _log_preview(outline.slides[i].content),
+            )
 
             try:
                 slide_content = await get_slide_content_from_type_and_outline(
@@ -691,6 +726,15 @@ async def generate_presentation_stream_events(
             except HTTPException as e:
                 yield SSEErrorResponse(detail=e.detail).to_string()
                 return
+            logger.warning(
+                "Slide content generation completed: presentation_id=%s slide=%s/%s elapsed=%.2fs keys=%s speaker_note_chars=%s",
+                presentation_id,
+                i + 1,
+                total_slides,
+                time.perf_counter() - slide_started_at,
+                sorted(slide_content.keys()),
+                len(str(slide_content.get("__speaker_note__", ""))),
+            )
 
             slide = SlideModel(
                 presentation=presentation_id,
@@ -707,6 +751,12 @@ async def generate_presentation_stream_events(
 
             # This will mutate slide - start task immediately so it runs in parallel with next slide LLM generation
             asset_warnings_by_slide[i] = []
+            logger.warning(
+                "Slide asset generation scheduled: presentation_id=%s slide=%s/%s",
+                presentation_id,
+                i + 1,
+                total_slides,
+            )
             asset_task = asyncio.create_task(
                 process_slide_and_fetch_assets(
                     image_generation_service,
@@ -764,6 +814,12 @@ async def generate_presentation_stream_events(
             data=json.dumps({"type": "chunk", "chunk": " ] }"}),
         ).to_string()
 
+        logger.warning(
+            "Waiting for remaining slide assets: presentation_id=%s emitted=%s total=%s",
+            presentation_id,
+            yielded_slide_asset_sse_count,
+            len(slides),
+        )
         while yielded_slide_asset_sse_count < len(slides):
             done_idx = await asset_events.get()
             yielded_slide_asset_sse_count += 1
@@ -803,6 +859,13 @@ async def generate_presentation_stream_events(
         sql_session.add_all(slides)
         sql_session.add_all(generated_assets)
         await sql_session.commit()
+        logger.warning(
+            "Presentation stream generation saved: presentation_id=%s slides=%s assets=%s elapsed=%.2fs",
+            presentation_id,
+            len(slides),
+            len(generated_assets),
+            time.perf_counter() - generation_started_at,
+        )
 
         response = PresentationWithSlides(
             **presentation.model_dump(),
@@ -1178,7 +1241,14 @@ async def generate_presentation_handler(
         for start in range(0, len(slide_layouts), batch_size):
             end = min(start + batch_size, len(slide_layouts))
 
-            print(f"Generating slides from {start} to {end}")
+            batch_started_at = time.perf_counter()
+            logger.warning(
+                "Presentation batch slide content generation started: presentation_id=%s slides=%s-%s/%s",
+                presentation_id,
+                start + 1,
+                end,
+                len(slide_layouts),
+            )
 
             # Generate contents for this batch concurrently
             content_tasks = [
@@ -1193,6 +1263,14 @@ async def generate_presentation_handler(
                 for i in range(start, end)
             ]
             batch_contents: List[dict] = await asyncio.gather(*content_tasks)
+            logger.warning(
+                "Presentation batch slide content generation completed: presentation_id=%s slides=%s-%s/%s elapsed=%.2fs",
+                presentation_id,
+                start + 1,
+                end,
+                len(slide_layouts),
+                time.perf_counter() - batch_started_at,
+            )
 
             # Build slides for this batch
             batch_slides: List[SlideModel] = []
@@ -1230,6 +1308,14 @@ async def generate_presentation_handler(
                 for offset, slide in enumerate(batch_slides)
             ]
             async_assets_generation_tasks.extend(asset_tasks)
+            logger.warning(
+                "Presentation batch asset generation scheduled: presentation_id=%s slides=%s-%s/%s tasks=%s",
+                presentation_id,
+                start + 1,
+                end,
+                len(slide_layouts),
+                len(asset_tasks),
+            )
 
         if async_status:
             async_status.message = "Fetching assets for slides"
@@ -1238,7 +1324,19 @@ async def generate_presentation_handler(
             await sql_session.commit()
 
         # Run all asset tasks concurrently while batches may still be generating content
+        assets_started_at = time.perf_counter()
+        logger.warning(
+            "Presentation asset generation wait started: presentation_id=%s tasks=%s",
+            presentation_id,
+            len(async_assets_generation_tasks),
+        )
         generated_assets_list = await asyncio.gather(*async_assets_generation_tasks)
+        logger.warning(
+            "Presentation asset generation wait completed: presentation_id=%s tasks=%s elapsed=%.2fs",
+            presentation_id,
+            len(async_assets_generation_tasks),
+            time.perf_counter() - assets_started_at,
+        )
         generated_assets = []
         for assets_list in generated_assets_list:
             generated_assets.extend(assets_list)
