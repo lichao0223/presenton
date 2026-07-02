@@ -21,6 +21,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Account created": "账号已创建",
     "Add Slide": "添加幻灯片",
     "Add First Slide": "添加第一页",
+    "Add current web context to presentations, or continue with web search disabled.":
+      "将当前网页上下文加入演示文稿，或在关闭联网搜索的情况下继续。",
     "Add a short summary of what this template is best for...":
       "简单描述这个模板最适合什么场景...",
     "Add new slide below": "在下方添加新幻灯片",
@@ -50,6 +52,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Build Theme": "创建主题",
     "Build Your Own Template": "创建你自己的模板",
     "Built-in": "内置",
+    "Bring current information into generated presentations":
+      "将当前信息带入生成的演示文稿",
     "Cancel": "取消",
     "Cannot delete slide": "无法删除幻灯片",
     "Cannot save settings": "无法保存设置",

@@ -1027,14 +1027,14 @@ const PresentonMode = ({
             <div className=''>
 
                 <h2 className='mb-4 text-black text-[26px] font-normal font-unbounded '>
-                    {providerStep === 1 ? "Choose your text provider" : providerStep === 2 ? "Choose your image provider" : "Configure web search"}
+                    {t(providerStep === 1 ? "Choose your text provider" : providerStep === 2 ? "Choose your image provider" : "Configure web search")}
                 </h2>
                 <p className='text-[#000000CC] text-xl font-normal font-syne'>
-                    {providerStep === 1
+                    {t(providerStep === 1
                         ? "Start with ChatGPT, run a local model, or connect another AI provider."
                         : providerStep === 2
                             ? "Choose how Presenton creates visuals, or continue without image generation."
-                            : "Add current web context to presentations, or continue with web search disabled."}
+                            : "Add current web context to presentations, or continue with web search disabled.")}
                 </p>
             </div>
             <div className='flex items-center gap-2 bg-[#F0F3F9B2] rounded-[8px]  px-6 py-2.5 my-[54px]'>
@@ -1679,13 +1679,13 @@ const PresentonMode = ({
                             <Search className="h-9 w-9 text-[#5146E5]" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-normal text-[#191919]">Web Search Settings</h3>
-                            <p className="text-sm text-gray-500">Bring current information into generated presentations</p>
+                            <h3 className="text-xl font-normal text-[#191919]">{t("Web Search Settings")}</h3>
+                            <p className="text-sm text-gray-500">{t("Bring current information into generated presentations")}</p>
                         </div>
                     </div>
                     {llmConfig.WEB_GROUNDING && <div className="space-y-4">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">Select Web Search Provider</label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">{t("Select Web Search Provider")}</label>
                                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                     {webSearchProviderRows.map((row, rowIndex) => (
                                         <React.Fragment key={`web-search-provider-row-${rowIndex}`}>
@@ -1748,10 +1748,10 @@ const PresentonMode = ({
                     onClick={handleContinue}
                     className='border font-syne border-[#EDEEEF] bg-[#7C51F8]  rounded-[58px] px-5 py-2.5 text-white text-xs  font-semibold'>
                     {providerStep === 1
-                        ? "Continue to image provider"
+                        ? t("Continue to image provider")
                         : providerStep === 2
-                            ? llmConfig.DISABLE_IMAGE_GENERATION ? "Disable image generation & Continue" : "Continue to web search"
-                            : llmConfig.WEB_GROUNDING ? "Save & Finish" : "Disable web search & Finish"}
+                            ? llmConfig.DISABLE_IMAGE_GENERATION ? t("Disable image generation & Continue") : t("Continue to web search")
+                            : llmConfig.WEB_GROUNDING ? t("Save & Finish") : t("Disable web search & Finish")}
                 </button>
             </div>
         </div>
