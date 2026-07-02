@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { getApiErrorMessage, getApiUrl } from "@/utils/api";
 import { notify } from "@/components/ui/sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export interface OpenAICompatibleImageFieldsProps {
   baseUrl: string;
@@ -46,6 +47,7 @@ export default function OpenAICompatibleImageFields({
   onModelListMetaChange,
   layout = "stacked",
 }: OpenAICompatibleImageFieldsProps) {
+  const { locale, t } = useI18n();
   const [models, setModels] = useState<string[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsChecked, setModelsChecked] = useState(false);
@@ -88,21 +90,21 @@ export default function OpenAICompatibleImageFields({
       } else {
         const message = await getApiErrorMessage(
           response,
-          "The server could not list models. Check your API key or endpoint and try again."
+          t("The server could not list models. Check your API key or endpoint and try again.")
         );
         console.error("Failed to fetch models");
         setModels([]);
         setModelsChecked(true);
         notify.error(
-          "Could not load models",
+          t("Could not load models"),
           message
         );
       }
     } catch (error) {
       console.error("Error fetching models:", error);
       notify.error(
-        "Could not load models",
-        "Something went wrong while contacting the provider. Check your network and try again."
+        t("Could not load models"),
+        t("Something went wrong while contacting the provider. Check your network and try again.")
       );
       setModels([]);
       setModelsChecked(true);
@@ -121,14 +123,14 @@ export default function OpenAICompatibleImageFields({
       <div className="flex shrink-0 flex-col items-end gap-4">
         <div className="relative flex w-[222px] min-w-0 max-w-full shrink-0 flex-col items-end justify-end">
           <div className="flex w-full flex-col justify-start">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Image API key</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">{t("Image API key")}</label>
             <div className="relative">
               <input
                 type={showApiKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(e) => onApiKeyChange(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-2 py-3 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                placeholder="Key for your image endpoint"
+                placeholder={t("Key for your image endpoint")}
               />
               <button
                 type="button"
@@ -143,7 +145,7 @@ export default function OpenAICompatibleImageFields({
               value={baseUrl}
               onChange={(e) => onBaseUrlChange(e.target.value)}
               className="mt-2 w-full rounded-lg border border-gray-300 px-2 py-3 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-              placeholder="Base URL (include /v1)"
+              placeholder={t("Base URL (include /v1)")}
             />
           </div>
           {(!modelsChecked || (modelsChecked && models.length === 0)) && (
@@ -160,10 +162,10 @@ export default function OpenAICompatibleImageFields({
               {modelsLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Checking for models...
+                  {t("Checking for models...")}
                 </span>
               ) : (
-                "Check models"
+                t("Check models")
               )}
             </button>
           )}
@@ -172,7 +174,7 @@ export default function OpenAICompatibleImageFields({
         {modelsChecked && models.length > 0 ? (
           <div className="w-[222px]">
             <div>
-              <label className="mb-3 block text-sm font-medium text-gray-700">Select image model</label>
+              <label className="mb-3 block text-sm font-medium text-gray-700">{t("Select image model")}</label>
               <div className="w-full">
                 <Popover open={openModelSelect} onOpenChange={setOpenModelSelect}>
                   <PopoverTrigger asChild>
@@ -183,16 +185,16 @@ export default function OpenAICompatibleImageFields({
                       className="flex h-12 w-full justify-between rounded-lg border border-gray-300 px-4 py-4 outline-none transition-colors hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                     >
                       <span className="truncate text-sm font-medium text-gray-900">
-                        {model || "Select a model"}
+                        {model || t("Select a model")}
                       </span>
                       <ChevronUp className="h-4 w-4 text-gray-500" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="p-0" align="start" style={{ width: "var(--radix-popover-trigger-width)" }}>
                     <Command>
-                      <CommandInput placeholder="Search models..." />
+                      <CommandInput placeholder={t("Search models...")} />
                       <CommandList>
-                        <CommandEmpty>No model found.</CommandEmpty>
+                        <CommandEmpty>{t("No model found.")}</CommandEmpty>
                         <CommandGroup>
                           {models.map((m) => (
                             <CommandItem
@@ -229,18 +231,29 @@ export default function OpenAICompatibleImageFields({
     <div className="w-full space-y-6">
       <p className="-mt-2 mb-2 flex items-center gap-2 text-sm text-gray-500">
         <span className="block h-1 w-1 rounded-full bg-gray-400" />
-        Use an endpoint that supports OpenAI-style{" "}
-        <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">/v1/images/generations</code>. Include{" "}
-        <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">/v1</code> in the URL.
+        {locale === "zh-CN" ? (
+          <>
+            请使用支持 OpenAI 风格{" "}
+            <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">/v1/images/generations</code>{" "}
+            的端点，并在 URL 中包含{" "}
+            <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">/v1</code>。
+          </>
+        ) : (
+          <>
+            Use an endpoint that supports OpenAI-style{" "}
+            <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">/v1/images/generations</code>. Include{" "}
+            <code className="rounded bg-gray-100 px-1 py-0.5 text-xs">/v1</code> in the URL.
+          </>
+        )}
       </p>
 
       <div className="mb-4">
-        <label className="mb-2 block text-sm font-medium text-gray-700">OpenAI Compatible URL</label>
+        <label className="mb-2 block text-sm font-medium text-gray-700">{t("OpenAI Compatible URL")}</label>
         <div className="relative">
           <input
             type="text"
             required
-            placeholder="Enter your URL"
+            placeholder={t("Enter your URL")}
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             value={baseUrl}
             onChange={(e) => onBaseUrlChange(e.target.value)}
@@ -249,12 +262,12 @@ export default function OpenAICompatibleImageFields({
       </div>
 
       <div className="mb-4">
-        <label className="mb-2 block text-sm font-medium text-gray-700">OpenAI Compatible API Key</label>
+        <label className="mb-2 block text-sm font-medium text-gray-700">{t("OpenAI Compatible API Key")}</label>
         <div className="relative">
           <input
             type="text"
             required
-            placeholder="Enter your API Key"
+            placeholder={t("Enter your API Key")}
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             value={apiKey}
             onChange={(e) => onApiKeyChange(e.target.value)}
@@ -277,10 +290,10 @@ export default function OpenAICompatibleImageFields({
             {modelsLoading ? (
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Checking for models...
+                {t("Checking for models...")}
               </div>
             ) : (
-              "Check for available models"
+              t("Check for available models")
             )}
           </button>
         </div>
@@ -289,14 +302,14 @@ export default function OpenAICompatibleImageFields({
       {modelsChecked && models.length === 0 && (
         <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
           <p className="text-sm text-yellow-800">
-            No models found. Please make sure your API key is valid and has access to models.
+            {t("No models found. Please make sure your API key is valid and has access to models.")}
           </p>
         </div>
       )}
 
       {modelsChecked && models.length === 0 && (
         <div className="mb-4">
-          <label className="mb-2 block text-sm font-medium text-gray-700">Image model id</label>
+          <label className="mb-2 block text-sm font-medium text-gray-700">{t("Image model id")}</label>
           <div className="relative">
             <input
               type="text"
@@ -314,10 +327,10 @@ export default function OpenAICompatibleImageFields({
         <div className="mb-4">
           <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
             <p className="text-sm text-amber-800">
-              <strong>Important:</strong> Choose a model your server exposes for image generation.
+              <strong>{t("Important:")}</strong> {t("Choose a model your server exposes for image generation.")}
             </p>
           </div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">Select image model</label>
+          <label className="mb-2 block text-sm font-medium text-gray-700">{t("Select image model")}</label>
           <div className="w-full">
             <Popover open={openModelSelect} onOpenChange={setOpenModelSelect}>
               <PopoverTrigger asChild>
@@ -327,15 +340,15 @@ export default function OpenAICompatibleImageFields({
                   aria-expanded={openModelSelect}
                   className="flex h-12 w-full justify-between rounded-lg border border-gray-300 px-4 py-4 font-normal outline-none transition-colors hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 >
-                  <span className="text-sm font-medium text-gray-900">{model || "Select a model"}</span>
+                  <span className="text-sm font-medium text-gray-900">{model || t("Select a model")}</span>
                   <ChevronUp className="h-4 w-4 text-gray-500" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="p-0" align="start" style={{ width: "var(--radix-popover-trigger-width)" }}>
                 <Command>
-                  <CommandInput placeholder="Search model..." />
+                  <CommandInput placeholder={t("Search model...")} />
                   <CommandList>
-                    <CommandEmpty>No model found.</CommandEmpty>
+                    <CommandEmpty>{t("No model found.")}</CommandEmpty>
                     <CommandGroup>
                       {models.map((m, index) => (
                         <CommandItem

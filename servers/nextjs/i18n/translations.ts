@@ -56,6 +56,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Casual": "轻松",
     "Check Fonts": "检查字体",
     "Check models": "检查模型",
+    "Check for available models": "检查可用模型",
     "Checking Fonts...": "正在检查字体...",
     "Checking for models...": "正在检查模型...",
     "ChatGPT model": "ChatGPT 模型",
@@ -82,6 +83,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Configure advanced AI features.": "配置高级 AI 功能。",
     "Configure web access and advanced AI features.":
       "配置联网访问和高级 AI 功能。",
+    "Configure the selected image provider before continuing.":
+      "继续前请先配置所选生图提供商。",
     "Configure web search": "配置联网搜索",
     "Content generated": "内容已生成",
     "Content:": "内容：",
@@ -122,8 +125,10 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Delete Theme?": "确认删除主题？",
     "Deleting...": "正在删除...",
     "Default": "默认",
+    "Default (Model)": "默认（模型）",
     "DeepSeek base URL (optional)": "DeepSeek 基础地址（可选）",
     "DeepSeek API Key": "DeepSeek API 密钥",
+    "DeepSeek models via DeepSeek API": "通过 DeepSeek API 使用 DeepSeek 模型",
     "Default (Model) (Off)": "默认（模型）（关闭）",
     "Defaults to localhost:1234/v1, and /v1 is added automatically when omitted.":
       "默认使用 localhost:1234/v1；未填写 /v1 时会自动补上。",
@@ -206,6 +211,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "GPT Image 1.5 Quality": "GPT Image 1.5 图片质量",
     "Help": "帮助",
     "Image Generation Settings": "生图设置",
+    "Image API key": "生图 API 密钥",
     "Image Provider": "生图提供商",
     "Image Too Large": "图片过大",
     "Image generation disabled": "生图已关闭",
@@ -288,6 +294,11 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Open WebUI URL": "Open WebUI 地址",
     "OpenAI Compatible API Key": "OpenAI 兼容 API 密钥",
     "OpenAI Compatible URL": "OpenAI 兼容地址",
+    "OpenAI-compatible /v1/images endpoint (LiteLLM, Azure, vLLM, etc.)":
+      "OpenAI 兼容的 /v1/images 端点（LiteLLM、Azure、vLLM 等）",
+    "OpenAI-compatible base URL": "OpenAI 兼容基础地址",
+    "OpenAI-compatible LLM": "OpenAI 兼容大语言模型",
+    "OpenAI-compatible LiteLLM proxy or gateway": "OpenAI 兼容的 LiteLLM 代理或网关",
     "OpenAI-compatible URL": "OpenAI 兼容地址",
     "OpenAI-compatible root (usually ends with /v1); /v1 is added if omitted. API key above is optional for local proxies with no auth.":
       "OpenAI 兼容根地址（通常以 /v1 结尾）；未填写 /v1 时会自动补上。若本地代理不需要认证，上方 API 密钥可不填。",
@@ -397,6 +408,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Select a quality": "选择质量",
     "Select a PPTX file": "请选择 PPTX 文件",
     "Select image provider": "选择生图提供商",
+    "Select image model": "选择生图模型",
     "Select language": "选择语言",
     "Select text provider": "选择文本生成提供商",
     "Select tone": "选择语气",
@@ -578,6 +590,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Please enter a prompt before submitting.": "提交前请输入提示词。",
     "The server did not return an updated slide. Please try again.":
       "服务器没有返回更新后的幻灯片，请重试。",
+    "The server could not list models. Check your API key or endpoint and try again.":
+      "服务器无法列出模型。请检查 API 密钥或端点后重试。",
     "Something went wrong while editing the slide.":
       "编辑幻灯片时出错。",
     "Connection failed": "连接失败",
@@ -820,6 +834,43 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
       "你的实验性 PPTX 文件已下载。",
     "Your presentation is being exported. This may take a moment.":
       "正在导出演示文稿，可能需要一点时间。",
+    "AI-native web search with extracted result highlights.":
+      "AI 原生网页搜索，并提取结果亮点。",
+    "Anthropic's Claude models": "Anthropic Claude 模型",
+    "AWS Bedrock foundation models": "AWS Bedrock 基础模型",
+    "Azure-hosted OpenAI deployments": "Azure 托管的 OpenAI 部署",
+    "Base URL (include /v1)": "基础地址（包含 /v1）",
+    "Brave Search API for web search results.": "使用 Brave Search API 获取网页搜索结果。",
+    "Cerebras Cloud via OpenAI-compatible API": "通过 OpenAI 兼容 API 使用 Cerebras Cloud",
+    "ChatGPT Plus/Pro via OAuth": "通过 OAuth 使用 ChatGPT Plus/Pro",
+    "Choose a model your server exposes for image generation.":
+      "请选择你的服务器暴露出来用于生图的模型。",
+    "Could not load models": "无法加载模型",
+    "Fireworks AI via OpenAI-compatible API": "通过 OpenAI 兼容 API 使用 Fireworks AI",
+    "Free images and videos": "免费图片和视频",
+    "Free stock photo and video platform": "免费图库照片和视频平台",
+    "Google's advanced image generation model": "Google 高级生图模型",
+    "Google's fast image generation model": "Google 快速生图模型",
+    "Google's primary text generation model": "Google 主力文本生成模型",
+    "Google Vertex AI models": "Google Vertex AI 模型",
+    "Key for your image endpoint": "你的生图端点密钥",
+    "Local LM Studio OpenAI-compatible server": "本地 LM Studio OpenAI 兼容服务",
+    "Many models through OpenRouter’s OpenAI-compatible API":
+      "通过 OpenRouter 的 OpenAI 兼容 API 使用多种模型",
+    "Ollama's primary text generation model": "Ollama 主力文本生成模型",
+    "OpenAI's image generation model": "OpenAI 生图模型",
+    "OpenAI's latest text generation model": "OpenAI 最新文本生成模型",
+    "Presenton will use model-native web grounding when available. If the selected text model does not support it, web search stays off until you choose an external provider.":
+      "可用时 Presenton 会使用模型原生联网检索。如果所选文本模型不支持，联网搜索会保持关闭，直到你选择外部提供商。",
+    "Search API optimized for AI applications.": "面向 AI 应用优化的搜索 API。",
+    "Together AI via OpenAI-compatible API": "通过 OpenAI 兼容 API 使用 Together AI",
+    "Use a self-hosted SearXNG instance.": "使用自托管的 SearXNG 实例。",
+    "Use model-native web grounding when available. Otherwise web search stays off until you choose an external provider.":
+      "可用时使用模型原生联网检索。否则联网搜索会保持关闭，直到你选择外部提供商。",
+    "Use your local ComfyUI server with custom workflows":
+      "使用本地 ComfyUI 服务和自定义工作流",
+    "Use your Open WebUI server for image generation":
+      "使用你的 Open WebUI 服务进行生图",
     "completed.": "已完成。",
     "e.g., Modern Tech Pitch": "例如：现代科技路演",
     "e.g. team collaboration, modern office, sunset mountains…":
