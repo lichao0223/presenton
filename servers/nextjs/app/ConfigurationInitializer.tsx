@@ -9,9 +9,11 @@ import { isOllamaModelAvailable } from '@/utils/providerUtils';
 import { LLMConfig } from '@/types/llm_config';
 import { getApiUrl } from '@/utils/api';
 import { notify } from '@/components/ui/sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export function ConfigurationInitializer({ children }: { children: React.ReactNode }) {
   const dispatch = useDispatch();
+  const { t } = useI18n();
 
   const route = usePathname();
   const [isLoading, setIsLoading] = useState(
@@ -108,20 +110,10 @@ export function ConfigurationInitializer({ children }: { children: React.ReactNo
           }
         }
         if (llmConfig.LLM === 'custom') {
-          const isAvailable = await checkIfSelectedCustomModelIsAvailable(llmConfig);
-          if (!isAvailable) {
-            router.push('/');
-            setLoadingToFalseAfterNavigatingTo('/');
-            return;
-          }
+          await checkIfSelectedCustomModelIsAvailable(llmConfig);
         }
         if (llmConfig.LLM === 'deepseek') {
-          const isAvailable = await checkIfSelectedDeepSeekModelIsAvailable(llmConfig);
-          if (!isAvailable) {
-            router.push('/');
-            setLoadingToFalseAfterNavigatingTo('/');
-            return;
-          }
+          await checkIfSelectedDeepSeekModelIsAvailable(llmConfig);
         }
         if (route === '/') {
           router.push('/upload');
@@ -202,13 +194,13 @@ export function ConfigurationInitializer({ children }: { children: React.ReactNo
               <div className="mx-auto h-1 w-16 rounded-full bg-[#7C51F8]" />
             </div>
 
-            {/* Loading Text */}
+              {/* Loading Text */}
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-gray-800 font-inter">
-                Initializing Application
+                {t("Initializing Application")}
               </h3>
               <p className="text-sm text-gray-600 font-inter">
-                Loading configuration and checking model availability...
+                {t("Loading configuration and checking model availability...")}
               </p>
             </div>
 

@@ -25,6 +25,7 @@ import { setPptGenUploadState } from "@/store/slices/presentationGenUpload";
 import { LanguageType, PresentationConfig, ToneType, VerbosityType } from "../../upload/type";
 import { PresentationGenerationApi } from "../../services/api/presentation-generation";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const DEFAULT_OUTLINE_CONFIG: PresentationConfig = {
   slides: null,
@@ -73,6 +74,7 @@ const getOutlinesFromResponse = (outline: any): { content: string }[] => {
 
 const OutlinePage: React.FC = () => {
   const dispatch = useDispatch();
+  const { t } = useI18n();
   const { presentation_id, outlines } = useSelector(
     (state: RootState) => state.presentationGeneration
   );
@@ -141,7 +143,7 @@ const OutlinePage: React.FC = () => {
   const handleTabChange = (tab: string) => {
     if (tab === TABS.OUTLINE) {
       if (!hasSelectedTemplate) {
-        toast.error("Please select a template first");
+        toast.error(t("Please select a template first"));
         return;
       }
 
@@ -178,7 +180,7 @@ const OutlinePage: React.FC = () => {
     }
 
     if (!hasSelectedTemplate) {
-      toast.error("Please select a template first");
+      toast.error(t("Please select a template first"));
       return;
     }
 
@@ -187,17 +189,17 @@ const OutlinePage: React.FC = () => {
     }
 
     if (!draftConfig.language) {
-      toast.error("Please select language");
+      toast.error(t("Please select language"));
       return;
     }
 
     if (documentPaths.length > 0 && draftConfig.language === LanguageType.Auto) {
-      toast.error("Please choose a language before regenerating from documents");
+      toast.error(t("Please choose a language before regenerating from documents"));
       return;
     }
 
     if (!draftConfig.prompt.trim() && documentPaths.length === 0) {
-      toast.error("No Prompt or Document Provided");
+      toast.error(t("No Prompt or Document Provided"));
       return;
     }
 
@@ -223,8 +225,8 @@ const OutlinePage: React.FC = () => {
       setActiveTab(TABS.OUTLINE);
     } catch (error: any) {
       console.error("Error regenerating outline", error);
-      toast.error("Outline Error", {
-        description: error.message || "Failed to regenerate outline.",
+      toast.error(t("Outline Error"), {
+        description: error.message || t("Failed to regenerate outline."),
       });
     } finally {
       setIsRegeneratingOutline(false);
@@ -238,6 +240,7 @@ const OutlinePage: React.FC = () => {
     hasSelectedTemplate,
     isOutlineReady,
     outlineControlsBusy,
+    t,
   ]);
 
   const handleOutlineChanged = useCallback(async () => {
@@ -267,7 +270,7 @@ const OutlinePage: React.FC = () => {
 
       <OverlayLoader
         show={loadingState.isLoading}
-        text={loadingState.message}
+        text={t(loadingState.message)}
         showProgress={loadingState.showProgress}
         duration={loadingState.duration}
       />
@@ -301,7 +304,7 @@ const OutlinePage: React.FC = () => {
                       value={TABS.LAYOUTS}
                       className="relative rounded-full px-5 py-2 text-xs font-medium text-[#2D2D2D] shadow-none data-[state=active]:bg-[#F4F3FF] data-[state=active]:text-[#7E3AF2] data-[state=active]:shadow-none"
                     >
-                      Select Template
+                      {t("Select Template")}
                     </TabsTrigger>
                     <Separator orientation="vertical" className="mx-1 h-6" />
                     <TabsTrigger
@@ -312,7 +315,7 @@ const OutlinePage: React.FC = () => {
                         !isOutlineReady && "cursor-not-allowed opacity-50"
                       )}
                     >
-                      Outline & Content
+                      {t("Outline & Content")}
                     </TabsTrigger>
                   </TabsList>
                 </div>

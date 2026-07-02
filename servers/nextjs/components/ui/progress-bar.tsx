@@ -4,14 +4,31 @@ import React, { useEffect, useState, useRef } from 'react';
 interface ProgressBarProps {
     duration: number;
     onComplete?: () => void;
+    value?: number;
 }
 
-export const ProgressBar = ({ duration, onComplete }: ProgressBarProps) => {
+export const ProgressBar = ({ duration, onComplete, value }: ProgressBarProps) => {
     const [progress, setProgress] = useState(0);
     const progressInterval = useRef<NodeJS.Timeout | null>(null);
     const startTime = useRef<number>(Date.now());
 
+    const clearProgressInterval = () => {
+        if (progressInterval.current) {
+            clearInterval(progressInterval.current);
+            progressInterval.current = null;
+        }
+    };
+
     useEffect(() => {
+        if (typeof value === "number") {
+            clearProgressInterval();
+            setProgress(Math.max(0, Math.min(value, 100)));
+            return;
+        }
+
+        clearProgressInterval();
+        startTime.current = Date.now();
+
         const updateProgress = () => {
             const currentTime = Date.now();
             const elapsedTime = currentTime - startTime.current;
@@ -19,17 +36,14 @@ export const ProgressBar = ({ duration, onComplete }: ProgressBarProps) => {
 
             if (calculatedProgress >= 95) {
                 setProgress(95);
-                if (progressInterval.current) {
-                    clearInterval(progressInterval.current);
-                }
+                clearProgressInterval();
                 onComplete?.();
                 return;
             }
 
             // Slow down progress after 90%
             if (calculatedProgress > 90) {
-                const remainingProgress = Math.min(99 - progress, 0.1);
-                setProgress(prev => prev + remainingProgress);
+                setProgress(prev => prev + Math.min(99 - prev, 0.1));
             } else {
                 setProgress(Math.min(calculatedProgress, 90));
             }
@@ -38,11 +52,9 @@ export const ProgressBar = ({ duration, onComplete }: ProgressBarProps) => {
         progressInterval.current = setInterval(updateProgress, 50);
 
         return () => {
-            if (progressInterval.current) {
-                clearInterval(progressInterval.current);
-            }
+            clearProgressInterval();
         };
-    }, [duration, onComplete]);
+    }, [duration, onComplete, value]);
 
     return (
         <div className="w-full space-y-2">

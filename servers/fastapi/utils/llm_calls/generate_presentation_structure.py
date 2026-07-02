@@ -1,16 +1,21 @@
+import logging
 from typing import Optional
 
 from llmai import get_client
 from llmai.shared import JSONSchemaResponse, Message, SystemMessage, UserMessage
+from enums.llm_provider import LLMProvider
 from models.presentation_layout import PresentationLayoutModel
 from models.presentation_outline_model import PresentationOutlineModel
+from utils.custom_llm_json_fallback import generate_custom_json_from_messages
 from utils.llm_config import get_llm_config
 from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_utils import generate_structured_with_schema_retries
-from utils.llm_provider import get_model
+from utils.llm_provider import get_llm_provider, get_model
 from utils.get_dynamic_models import get_presentation_structure_model_with_n_slides
 from utils.schema_utils import prepare_schema_for_validation
 from models.presentation_structure_model import PresentationStructureModel
+
+LOGGER = logging.getLogger(__name__)
 
 
 STRUCTURE_FROM_SLIDES_MARKDOWN_SYSTEM_PROMPT = """
@@ -140,26 +145,42 @@ async def generate_presentation_structure(
 ) -> PresentationStructureModel:
     client = get_client(config=get_llm_config())
     model = get_model()
+    n_slides = len(presentation_outline.slides)
     response_model = get_presentation_structure_model_with_n_slides(
-        len(presentation_outline.slides)
+        n_slides
+    )
+    messages = (
+        get_messages_for_slides_markdown(
+            presentation_layout,
+            len(presentation_outline.slides),
+            presentation_outline.to_string(),
+            instructions,
+        )
+        if using_slides_markdown
+        else get_messages(
+            presentation_layout,
+            len(presentation_outline.slides),
+            presentation_outline.to_string(),
+            instructions,
+        )
     )
 
-    try:
-        messages = (
-            get_messages_for_slides_markdown(
-                presentation_layout,
-                len(presentation_outline.slides),
-                presentation_outline.to_string(),
-                instructions,
-            )
-            if using_slides_markdown
-            else get_messages(
-                presentation_layout,
-                len(presentation_outline.slides),
-                presentation_outline.to_string(),
-                instructions,
-            )
+    if get_llm_provider() == LLMProvider.CUSTOM:
+        content = await generate_custom_json_from_messages(
+            model=model,
+            messages=messages,
+            instruction=(
+                "Return JSON only, with this exact shape: "
+                '{"slides":[0,1,2]}. '
+                "The slides array must contain exactly "
+                f"{n_slides} integers, one layout index for each slide. "
+                f"Every integer must be between 0 and {len(presentation_layout.slides) - 1}. "
+                "Do not wrap the JSON in markdown fences. Do not include any keys except slides."
+            ),
         )
+        return PresentationStructureModel(**content)
+
+    try:
         structure_schema = prepare_schema_for_validation(
             response_model.model_json_schema(),
             strict=True,
@@ -181,4 +202,22 @@ async def generate_presentation_structure(
         )
         return PresentationStructureModel(**content)
     except Exception as e:
+        if get_llm_provider() == LLMProvider.CUSTOM:
+            try:
+                content = await generate_custom_json_from_messages(
+                    model=model,
+                    messages=messages,
+                    instruction=(
+                        "The previous structured-output attempt failed. "
+                        "Return JSON only, with this exact shape: "
+                        '{"slides":[0,1,2]}. '
+                        "The slides array must contain exactly "
+                        f"{n_slides} integers, one layout index for each slide. "
+                        f"Every integer must be between 0 and {len(presentation_layout.slides) - 1}. "
+                        "Do not wrap the JSON in markdown fences. Do not include any keys except slides."
+                    ),
+                )
+                return PresentationStructureModel(**content)
+            except Exception:
+                LOGGER.exception("Custom LLM presentation-structure fallback failed")
         raise handle_llm_client_exceptions(e)

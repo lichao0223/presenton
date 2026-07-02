@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingState } from "../types/index";
 import { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 import { ChevronRight } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface GenerateButtonProps {
   loadingState: LoadingState;
@@ -17,6 +18,7 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({
   selectedTemplate,
   onSubmit,
 }) => {
+  const { t } = useI18n();
   const isDisabled =
     loadingState.isLoading ||
     streamState.isLoading ||
@@ -24,10 +26,10 @@ const GenerateButton: React.FC<GenerateButtonProps> = ({
     !selectedTemplate;
 
   const getButtonText = () => {
-    if (loadingState.isLoading) return loadingState.message;
-    if (streamState.isLoading || streamState.isStreaming) return "Loading...";
-    if (!selectedTemplate) return "Select a Template";
-    return "Generate Presentation";
+    if (loadingState.isLoading) return t(loadingState.message);
+    if (streamState.isLoading || streamState.isStreaming) return t("Loading...");
+    if (!selectedTemplate) return t("Select a Template");
+    return t("Generate Presentation");
   };
 
   return (

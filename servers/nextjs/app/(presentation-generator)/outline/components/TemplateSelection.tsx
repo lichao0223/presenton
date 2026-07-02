@@ -15,6 +15,7 @@ import {
   LayoutsBadge,
   InbuiltTemplatePreview,
 } from "../../components/TemplatePreviewComponents";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const BuiltInTemplateCard = memo(function BuiltInTemplateCard({
   template,
@@ -25,6 +26,7 @@ const BuiltInTemplateCard = memo(function BuiltInTemplateCard({
   isSelected: boolean;
   onSelect: (template: TemplateLayoutsWithSettings) => void;
 }) {
+  const { t } = useI18n();
   const handleClick = useCallback(() => onSelect(template), [onSelect, template]);
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -42,7 +44,7 @@ const BuiltInTemplateCard = memo(function BuiltInTemplateCard({
       role="button"
       tabIndex={0}
       aria-pressed={isSelected}
-      aria-label={`Select ${template.name} template`}
+      aria-label={t("Select {template} template").replace("{template}", template.name)}
       className={cn(
         "cursor-pointer relative transition-all duration-200 group overflow-hidden rounded-[22px] bg-white border outline-none",
         "hover:-translate-y-1 hover:border-[#7A5AF8] hover:ring-2 hover:ring-[#7A5AF8]/20 hover:shadow-[0_18px_40px_rgba(34,31,54,0.12)]",
@@ -87,6 +89,8 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
   selectedTemplate,
   onSelectTemplate,
 }) {
+  const { t } = useI18n();
+
   useEffect(() => {
     const existingScript = document.querySelector(
       'script[src*="tailwindcss.com"]'
@@ -126,7 +130,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
       return (
         <div className="flex items-center justify-center py-12 font-syne">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <span className="ml-3 text-gray-600">Loading custom templates...</span>
+          <span className="ml-3 text-gray-600">{t("Loading custom templates...")}</span>
         </div>
       );
     }
@@ -149,7 +153,7 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
         ))}
       </div>
     );
-  }, [customLoading, customTemplates, handleCustomSelect, selectedCustomId]);
+  }, [customLoading, customTemplates, handleCustomSelect, selectedCustomId, t]);
 
   const builtInTemplateCards = useMemo(
     () =>
@@ -168,12 +172,12 @@ const TemplateSelection: React.FC<TemplateSelectionProps> = memo(function Templa
     <div className="space-y-[30px] mb-4">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-semibold text-gray-900 font-syne">Custom</h3>
+          <h3 className="text-base font-semibold text-gray-900 font-syne">{t("Custom")}</h3>
         </div>
         {customTemplateCards}
       </div>
       <div>
-        <h3 className="text-base font-semibold text-gray-900 mb-3 font-syne">In Built</h3>
+        <h3 className="text-base font-semibold text-gray-900 mb-3 font-syne">{t("In Built")}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {builtInTemplateCards}
         </div>

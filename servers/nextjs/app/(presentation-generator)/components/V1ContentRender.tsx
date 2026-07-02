@@ -10,11 +10,13 @@ import { useCustomTemplateDetails } from "@/app/hooks/useCustomTemplates";
 import { updateSlideContent } from "@/store/slices/presentationGeneration";
 import { useDispatch } from "react-redux";
 import { Loader2 } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 
 
 
 export const V1ContentRender = ({ slide, isEditMode, theme }: { slide: any, isEditMode: boolean, theme?: any, enableEditMode?: boolean }) => {
+    const { t } = useI18n();
     const dispatch = useDispatch();
     const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -73,16 +75,16 @@ export const V1ContentRender = ({ slide, isEditMode, theme }: { slide: any, isEd
         if (Object.keys(slideContent).length === 0) {
             return (
                 <div className="flex flex-col items-center cursor-pointer justify-center aspect-video h-full bg-gray-100 rounded-lg">
-                    <p className="text-gray-600 text-center text-base">Blank Slide</p>
-                    <p className="text-gray-600 text-center text-sm">This slide is empty. Please add content to it using the edit button.</p>
+                    <p className="text-gray-600 text-center text-base">{t("Blank Slide")}</p>
+                    <p className="text-gray-600 text-center text-sm">{t("This slide is empty. Please add content to it using the edit button.")}</p>
                 </div>
             )
         }
         return (
             <div className="flex flex-col items-center justify-center aspect-video h-full bg-gray-100 rounded-lg">
                 <p className="text-gray-600 text-center text-base">
-                    Layout &quot;{slideLayout || "unknown"}&quot; not found in &quot;
-                    {slideLayoutGroup || "unknown"}&quot; Template
+                    {t("Layout")} &quot;{slideLayout || t("unknown")}&quot; {t("not found in")} &quot;
+                    {slideLayoutGroup || t("unknown")}&quot; {t("Template")}
                 </p>
             </div>
         );

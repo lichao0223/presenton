@@ -50,21 +50,41 @@ async function resolveExportEntrypoint(exportRoot: string): Promise<string> {
   }
 }
 
-function bundledConverterPath(exportRoot: string): string {
+async function findFirstExistingFile(candidates: string[]): Promise<string | null> {
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+async function bundledConverterPath(exportRoot: string): Promise<string> {
   const fromEnv = process.env.BUILT_PYTHON_MODULE_PATH?.trim();
   if (fromEnv) {
     return fromEnv;
   }
-  if (process.platform === "linux") {
-    if (process.arch === "x64") {
-      return path.join(exportRoot, "py", "convert-linux-x64");
-    }
-    if (process.arch === "arm64") {
-      return path.join(exportRoot, "py", "convert-linux-arm64");
-    }
+
+  const pyDir = path.join(exportRoot, "py");
+  const platformArch =
+    process.platform === "linux" && process.arch === "x64"
+      ? "linux-x64"
+      : `${process.platform}-${process.arch}`;
+  const candidates = [
+    path.join(pyDir, `convert-${platformArch}`),
+    path.join(pyDir, `convert-${process.platform}`),
+    path.join(pyDir, "convert"),
+  ];
+  const converter = await findFirstExistingFile(candidates);
+  if (converter) {
+    return converter;
   }
+
   throw new Error(
-    `No bundled export converter for ${process.platform}/${process.arch}. Set BUILT_PYTHON_MODULE_PATH.`
+    `No bundled export converter for ${process.platform}/${process.arch}. Set BUILT_PYTHON_MODULE_PATH. Checked: ${candidates.join(", ")}`
   );
 }
 
@@ -72,7 +92,7 @@ export async function bundledExportPackageAvailable(): Promise<boolean> {
   try {
     const root = getExportPackageRoot();
     await resolveExportEntrypoint(root);
-    await fs.access(bundledConverterPath(root));
+    await fs.access(await bundledConverterPath(root));
     return true;
   } catch {
     return false;
@@ -177,13 +197,13 @@ async function runBundledPresentationExportLocked(params: {
   const { presentationId, title, format, cookieHeader } = params;
   const exportRoot = getExportPackageRoot();
   const entrypoint = await resolveExportEntrypoint(exportRoot);
-  const converter = bundledConverterPath(exportRoot);
+  const converter = await bundledConverterPath(exportRoot);
   const appRoot = getPresentonAppRoot();
 
   await fs.access(converter);
 
   const nextjsUrl =
-    process.env.NEXT_PUBLIC_URL?.trim() || "http://127.0.0.1";
+    process.env.NEXT_PUBLIC_URL?.trim() || "http://127.0.0.1:3000";
   const q = new URLSearchParams({ id: presentationId });
   const sessionToken = extractSessionTokenFromCookieHeader(cookieHeader);
   if (sessionToken) {

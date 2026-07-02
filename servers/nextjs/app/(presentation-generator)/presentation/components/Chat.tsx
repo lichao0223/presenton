@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
-  LocateFixed,
   MessageCircleMore,
   Plus,
   RefreshCw,
@@ -25,9 +24,9 @@ import { notify } from "@/components/ui/sonner";
 import MarkdownRenderer from "@/components/MarkDownRender";
 import { PresentationChatApi } from "../../services/api/chat";
 import type { ChatStreamTrace } from "../../services/api/chat";
-import { is } from "@babel/types";
 import ToolTip from "@/components/ToolTip";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const suggestions: { id: string; icon: ReactNode; suggestion: string }[] = [
   {
@@ -316,14 +315,18 @@ const SLIDE_FOCUS_TOOLS = new Set(["saveSlide", "deleteSlide"]);
 const SLIDE_FOCUS_STATUSES = new Set(["start"]);
 const MIN_SLIDE_FOCUS_DWELL_MS = 700;
 
-const getToolLabel = (tool?: string) => {
+const getToolLabel = (tool?: string, t: (text: string) => string = (text) => text) => {
   if (!tool) {
     return "";
   }
-  return TOOL_LABELS[tool] ?? tool;
+  return t(TOOL_LABELS[tool] ?? tool);
 };
 
-const humanizeTraceMessage = (message: string, tool?: string) => {
+const humanizeTraceMessage = (
+  message: string,
+  tool?: string,
+  t: (text: string) => string = (text) => text
+) => {
   const trimmed = message.trim();
   if (!trimmed) {
     return "";
@@ -331,52 +334,52 @@ const humanizeTraceMessage = (message: string, tool?: string) => {
 
   const lower = trimmed.toLowerCase();
   if (lower === "reading deck context") {
-    return "Reviewing your presentation context.";
+    return t("Reviewing your presentation context.");
   }
   if (lower === "reading the presentation outline") {
-    return "Reading the presentation outline.";
+    return t("Reading the presentation outline.");
   }
   if (lower === "reading the outline draft") {
-    return "Reading the outline draft.";
+    return t("Reading the outline draft.");
   }
   if (lower === "adding an outline slide") {
-    return "Adding an outline slide.";
+    return t("Adding an outline slide.");
   }
   if (lower === "updating the outline slide") {
-    return "Updating the outline slide.";
+    return t("Updating the outline slide.");
   }
   if (lower === "deleting the outline slide") {
-    return "Deleting the outline slide.";
+    return t("Deleting the outline slide.");
   }
   if (lower === "reordering outline slides") {
-    return "Reordering outline slides.";
+    return t("Reordering outline slides.");
   }
   if (lower === "searching relevant slides") {
-    return "Searching slides for relevant content.";
+    return t("Searching slides for relevant content.");
   }
   if (lower === "opening the requested slide") {
-    return "Opening the selected slide.";
+    return t("Opening the selected slide.");
   }
   if (lower === "checking available themes") {
-    return "Checking available color themes.";
+    return t("Checking available color themes.");
   }
   if (lower === "checking available layouts") {
-    return "Checking available layouts.";
+    return t("Checking available layouts.");
   }
   if (lower === "checking the layout schema") {
-    return "Validating the slide schema.";
+    return t("Validating the slide schema.");
   }
   if (lower === "generating slide assets") {
-    return "Generating images and icons.";
+    return t("Generating images and icons.");
   }
   if (lower === "saving the slide") {
-    return "Saving slide updates.";
+    return t("Saving slide updates.");
   }
   if (lower === "deleting the slide") {
-    return "Deleting the slide.";
+    return t("Deleting the slide.");
   }
   if (lower === "applying presentation theme") {
-    return "Applying the selected theme.";
+    return t("Applying the selected theme.");
   }
   if (lower.startsWith("using tools:")) {
     const toolNames = trimmed
@@ -384,28 +387,28 @@ const humanizeTraceMessage = (message: string, tool?: string) => {
       .split(",")
       .map((entry) => entry.trim())
       .filter(Boolean)
-      .map((entry) => getToolLabel(entry));
+      .map((entry) => getToolLabel(entry, t));
     if (toolNames.length === 0) {
-      return "Planning tool steps.";
+      return t("Planning tool steps.");
     }
-    return `Planning tools: ${toolNames.join(", ")}.`;
+    return `${t("Planning tools")}: ${toolNames.join(", ")}.`;
   }
   if (lower.includes("found requested data")) {
     if (tool === "getSlideAtIndex") {
-      return "Found the requested slide details.";
+      return t("Found the requested slide details.");
     }
     if (tool === "getPresentationOutline") {
-      return "Found the requested outline details.";
+      return t("Found the requested outline details.");
     }
-    return "Found the requested information.";
+    return t("Found the requested information.");
   }
   if (lower.endsWith("completed.")) {
-    return trimmed;
+    return t(trimmed);
   }
   if (lower.includes("failed")) {
-    return trimmed;
+    return t(trimmed);
   }
-  return trimmed;
+  return t(trimmed);
 };
 
 const inferStatusState = (status: string): AssistantActivity["state"] => {
@@ -449,11 +452,12 @@ const stripBackendContextFromUserMessage = (rawMessage: string) => {
 };
 
 const formatTraceActivity = (
-  trace: ChatStreamTrace
+  trace: ChatStreamTrace,
+  t: (text: string) => string = (text) => text
 ): Omit<AssistantActivity, "id"> | null => {
   if (typeof trace.message === "string" && trace.message.trim().length > 0) {
     return {
-      label: humanizeTraceMessage(trace.message, trace.tool),
+      label: humanizeTraceMessage(trace.message, trace.tool, t),
       kind: trace.kind,
       round: trace.round,
       tool: trace.tool,
@@ -470,7 +474,7 @@ const formatTraceActivity = (
 
   if (trace.tool && trace.status === "start") {
     return {
-      label: `Running ${getToolLabel(trace.tool)}...`,
+      label: `${t("Running")} ${getToolLabel(trace.tool, t)}...`,
       kind: trace.kind,
       round: trace.round,
       tool: trace.tool,
@@ -480,7 +484,7 @@ const formatTraceActivity = (
 
   if (trace.tool && trace.status === "success") {
     return {
-      label: `${getToolLabel(trace.tool)} completed.`,
+      label: `${getToolLabel(trace.tool, t)} ${t("completed.")}`,
       kind: trace.kind,
       round: trace.round,
       tool: trace.tool,
@@ -490,7 +494,7 @@ const formatTraceActivity = (
 
   if (trace.tool && trace.status === "error") {
     return {
-      label: `${getToolLabel(trace.tool)} failed.`,
+      label: `${getToolLabel(trace.tool, t)} ${t("failed.")}`,
       kind: trace.kind,
       round: trace.round,
       tool: trace.tool,
@@ -504,8 +508,8 @@ const formatTraceActivity = (
     trace.tools.length
   ) {
     return {
-      label: `Planning tools: ${trace.tools
-        .map((tool) => getToolLabel(tool))
+      label: `${t("Planning tools")}: ${trace.tools
+        .map((tool) => getToolLabel(tool, t))
         .join(", ")}.`,
       kind: trace.kind,
       round: trace.round,
@@ -537,6 +541,7 @@ const Chat = ({
   onChatSendingStateChange,
   onFollowModeChange,
 }: ChatProps) => {
+  const { t } = useI18n();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -838,7 +843,7 @@ const Chat = ({
         "Failed to refresh presentation after tool mutation:",
         error
       );
-      notify.error("Refresh failed", "Changes were saved, but refresh failed.");
+      notify.error(t("Refresh failed"), t("Changes were saved, but refresh failed."));
     } finally {
       refreshInFlightRef.current = false;
       if (refreshQueuedRef.current) {
@@ -846,7 +851,7 @@ const Chat = ({
         void refreshPresentationIncrementally();
       }
     }
-  }, [onPresentationChanged]);
+  }, [onPresentationChanged, t]);
 
   const refreshPresentationIfNeeded = async (toolCalls: string[]) => {
     const hasMutation = toolCalls.some((tool) => MUTATING_TOOLS.has(tool));
@@ -862,7 +867,7 @@ const Chat = ({
       await onPresentationChanged();
     } catch (error) {
       console.error("Failed to refresh presentation after chat update:", error);
-      notify.error("Refresh failed", "Chat completed, but refresh failed.");
+      notify.error(t("Refresh failed"), t("Chat completed, but refresh failed."));
     }
   };
 
@@ -961,8 +966,8 @@ const Chat = ({
 
     if (!presentationId) {
       notify.error(
-        "Presentation not ready",
-        "The presentation is not ready yet."
+        t("Presentation not ready"),
+        t("The presentation is not ready yet.")
       );
       return;
     }
@@ -1040,7 +1045,7 @@ const Chat = ({
             } else if (trace.status === "success" || trace.status === "error") {
               updateMutationToolActivity(trace.tool, false);
             }
-            const traceActivity = formatTraceActivity(trace);
+            const traceActivity = formatTraceActivity(trace, t);
             if (!traceActivity) {
               return;
             }
@@ -1130,7 +1135,7 @@ const Chat = ({
           content: message,
         },
       ]);
-      notify.error("Chat error", message);
+      notify.error(t("Chat error"), message);
     } finally {
       setActiveMutationToolCount(0);
       if (abortControllerRef.current === streamAbortController) {
@@ -1185,12 +1190,12 @@ const Chat = ({
                 fill="#7A5AF8"
               />
             </svg>
-            AI Assistant
+            {t("AI Assistant")}
           </h4>
           {isSending && (
             <span className="inline-flex items-center gap-1 rounded-full bg-[#F4F3FF] px-2 py-0.5 text-[10px] font-medium text-[#6941C6]">
               <Loader2 className="h-2.5 w-2.5 animate-spin" />
-              Live
+              {t("Live")}
             </span>
           )}
         </div>
@@ -1200,8 +1205,8 @@ const Chat = ({
             onClick={resetChat}
             disabled={isSending || isHistoryLoading}
             className="rounded-full p-1 text-[#8C8C8C] transition-colors hover:bg-[#F7F7F7] hover:text-[#191919] disabled:cursor-not-allowed disabled:opacity-50"
-            aria-label="Reset chat"
-            title="Reset chat"
+            aria-label={t("Reset chat")}
+            title={t("Reset chat")}
           >
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -1212,25 +1217,25 @@ const Chat = ({
         {isHistoryLoading && messages.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-sm text-[#99A1AF]">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Loading chat…
+            {t("Loading chat…")}
           </div>
         ) : messages.length === 0 ? (
           <>
             {isOutlineVariant ? (
               <div>
                 <h4 className="mb-2 text-[10px] font-normal leading-[15px] tracking-[0.367px] text-[#99A1AF]">
-                  QUICK PROMPTS
+                  {t("QUICK PROMPTS")}
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {outlineQuickPrompts.map((prompt) => (
                     <button
                       key={prompt}
                       type="button"
-                      onClick={() => applyPrompt(prompt)}
+                      onClick={() => applyPrompt(t(prompt))}
                       className="cursor-pointer rounded-[10px] border border-[#F4F4F4] px-2.5 py-1 text-left transition-colors hover:bg-[#FAFAFA]"
                     >
                       <span className="text-[11px] font-normal leading-[15px] tracking-[0.367px] text-[#364153]">
-                        {prompt}
+                        {t(prompt)}
                       </span>
                     </button>
                   ))}
@@ -1239,19 +1244,19 @@ const Chat = ({
             ) : (
               <div>
                 <h4 className="mb-2 text-[10px] font-normal leading-[15px] tracking-[0.367px] text-[#99A1AF]">
-                  SUGGESTIONS
+                  {t("SUGGESTIONS")}
                 </h4>
                 <div className="flex flex-col gap-1.5">
                   {suggestions.map((suggestion) => (
                     <button
                       key={suggestion.id}
                       type="button"
-                      onClick={() => applyPrompt(suggestion.suggestion)}
+                      onClick={() => applyPrompt(t(suggestion.suggestion))}
                       className="flex cursor-pointer items-center gap-3 rounded-[10px] border border-[#F4F4F4] px-3 py-2 text-left transition-colors hover:bg-[#FAFAFA]"
                     >
                       {suggestion.icon}
                       <span className="text-xs font-normal leading-[15px] tracking-[0.367px] text-[#364153]">
-                        {suggestion.suggestion}
+                        {t(suggestion.suggestion)}
                       </span>
                     </button>
                   ))}
@@ -1303,7 +1308,7 @@ const Chat = ({
                     <div className="text-sm font-normal leading-5 text-[#535862]">
                       {isSending && message.role === "assistant"
                         ? message.activity?.[message.activity.length - 1]
-                            ?.label || "Working on it..."
+                            ?.label || t("Working on it...")
                         : ""}
                     </div>
                   )}
@@ -1319,7 +1324,7 @@ const Chat = ({
                         ) : (
                           <ChevronRight className="h-3 w-3" />
                         )}
-                        <span>Thinking</span>
+                        <span>{t("Thinking")}</span>
                         {message.activity.some(
                           (item) => item.state === "running"
                         ) && (
@@ -1336,7 +1341,7 @@ const Chat = ({
                             >
                               {activityItem.tool && (
                                 <span className="mr-1 text-[#475467]">
-                                  {getToolLabel(activityItem.tool)}:
+                                  {getToolLabel(activityItem.tool, t)}:
                                 </span>
                               )}
                               <span>{activityItem.label}</span>
@@ -1345,7 +1350,7 @@ const Chat = ({
                           {message.toolCalls &&
                             message.toolCalls.length > 0 && (
                               <div className="pt-0.5 text-[11px] text-[#98A2B3]">
-                                Tools called: {message.toolCalls.join(", ")}
+                                {t("Tools called")}: {message.toolCalls.join(", ")}
                               </div>
                             )}
                         </div>
@@ -1380,8 +1385,8 @@ const Chat = ({
           onKeyDown={handleKeyDown}
           placeholder={
             isOutlineVariant
-              ? "Regenerate this outline"
-              : "Improve your slides..."
+              ? t("Regenerate this outline")
+              : t("Improve your slides...")
           }
           aria-invalid={Boolean(errorMessage)}
         />
@@ -1391,8 +1396,8 @@ const Chat = ({
               type="button"
               disabled
               className="inline-flex h-[28px] items-center rounded-[64px] disabled:opacity-50"
-              aria-label="Attach files"
-              title="Attachments are not supported yet"
+              aria-label={t("Attach files")}
+              title={t("Attachments are not supported yet")}
             >
               <Plus className="h-3 w-3 text-black" />
             </button>
@@ -1409,8 +1414,8 @@ const Chat = ({
             <ToolTip
               content={
                 isFollowAgentEnabled
-                  ? "Disable follow AI mode"
-                  : "Enable follow AI mode"
+                  ? t("Disable follow AI mode")
+                  : t("Enable follow AI mode")
               }
             >
               <button
@@ -1420,13 +1425,13 @@ const Chat = ({
                 className={`inline-flex h-[28px] items-center gap-1 rounded-[64px]  text-[11px] font-medium transition-colors  disabled:cursor-not-allowed disabled:opacity-50`}
                 aria-label={
                   isFollowAgentEnabled
-                    ? "Disable follow AI mode"
-                    : "Enable follow AI mode"
+                    ? t("Disable follow AI mode")
+                    : t("Enable follow AI mode")
                 }
                 title={
                   isFollowAgentEnabled
-                    ? "Follow AI is on: auto-jump to active slide"
-                    : "Follow AI is off"
+                    ? t("Follow AI is on: auto-jump to active slide")
+                    : t("Follow AI is off")
                 }
               >
                 <svg
@@ -1490,14 +1495,14 @@ const Chat = ({
                 type="button"
                 onClick={stopStreaming}
                 className="flex items-center gap-1.5 whitespace-nowrap rounded-[34px] border border-[#E4E7EC] bg-white px-3 py-2 text-sm font-medium text-[#344054] transition-colors hover:bg-[#F9FAFB]"
-                aria-label="Stop chat response"
+                aria-label={t("Stop chat response")}
               >
                 <Loader2
                   className="h-3 w-3 animate-spin text-[#667085]"
                   aria-hidden="true"
                 />
                 <Square className="h-3 w-3 fill-current" aria-hidden="true" />
-                Stop
+                {t("Stop")}
               </button>
             ) : (
               <button
@@ -1511,7 +1516,7 @@ const Chat = ({
                 }}
               >
                 <Send className="h-3 w-3 text-[#191919]" />
-                Send
+                {t("Send")}
               </button>
             )}
           </div>

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncGenerator, Sequence
 from typing import Any, Optional
 
@@ -19,6 +20,26 @@ from utils.schema_utils import get_schema_validation_errors
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def normalize_structured_content_text(value: Any) -> Any:
+    if isinstance(value, str):
+        normalized = re.sub(r"\\+\r\n", " ", value)
+        normalized = re.sub(r"\\+\n", " ", normalized)
+        normalized = re.sub(r"\\+r\\+n", " ", normalized)
+        normalized = re.sub(r"\\+n", " ", normalized)
+        normalized = re.sub(r"\\+r", " ", normalized)
+        normalized = re.sub(r"\\+t", " ", normalized)
+        normalized = re.sub(r"\s+", " ", normalized)
+        return normalized
+    if isinstance(value, list):
+        return [normalize_structured_content_text(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: normalize_structured_content_text(item)
+            for key, item in value.items()
+        }
+    return value
 
 
 def get_generate_kwargs(
@@ -77,7 +98,16 @@ def structured_validation_feedback_user_message(
             + "\n".join(f"- {error}" for error in formatted_errors)
             + "\n\nPrevious invalid JSON:\n"
             + f"```json\n{previous_response}\n```\n\n"
-            + "Return corrected JSON only. Make sure it fully matches the required schema."
+            + "Return corrected JSON only. Make sure it fully matches the required schema.\n"
+            + "Fix aggressively:\n"
+            + "- If a string is too long, delete details until it is safely under maxLength.\n"
+            + "- Do not preserve wording when it violates maxLength; compress to the shortest accurate phrase.\n"
+            + "- Keep __speaker_note__ between 100 and 350 characters.\n"
+            + "- Keep __image_prompt__ under 6 English words.\n"
+            + "- Keep __icon_query__ as 1-2 simple English nouns.\n"
+            + "- Keep titles/headings as short labels, usually 2-5 words.\n"
+            + "- Keep descriptions to one short sentence unless the schema requires otherwise.\n"
+            + "- Never add extra fields."
         )
     )
 
@@ -113,6 +143,7 @@ async def generate_structured_with_schema_retries(
             )
             content = extract_structured_content(response.content)
             if content is not None:
+                content = normalize_structured_content_text(content)
                 break
             if attempt < 2:
                 await asyncio.sleep(0.5 * (attempt + 1))

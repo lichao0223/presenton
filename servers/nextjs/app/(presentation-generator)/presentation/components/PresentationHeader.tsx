@@ -48,6 +48,8 @@ import ThemeApi from "../../services/api/theme";
 import { Theme } from "../../services/api/types";
 import MarkdownRenderer from "@/components/MarkDownRender";
 import { cn } from "@/lib/utils";
+import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const MAX_EXPORT_TITLE_LENGTH = 40;
 
@@ -94,6 +96,7 @@ const PresentationHeader = ({
   isPresentationSaving: boolean;
   currentSlide?: number;
 }) => {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
@@ -118,13 +121,13 @@ const PresentationHeader = ({
         const [customThemes] = await Promise.all([ThemeApi.getThemes()]);
         setThemes([...customThemes, ...DEFAULT_THEMES]);
       } catch (e: any) {
-        notify.error("Could not load themes", e?.message || "Failed to load themes.");
+        notify.error(t("Could not load themes"), e?.message || t("Failed to load themes."));
       }
     };
     if (themes.length === 0) {
       load();
     }
-  }, []);
+  }, [themes.length, t]);
 
   const { onUndo, onRedo, canUndo, canRedo } = usePresentationUndoRedo();
 
@@ -213,8 +216,8 @@ const PresentationHeader = ({
         slide_count: presentationData?.slides?.length || 0,
       });
       exportToastId = notify.loading(
-        "Exporting PPTX",
-        "Your presentation is being exported. This may take a moment."
+        t("Exporting PPTX"),
+        t("Your presentation is being exported. This may take a moment.")
       );
       setIsExporting(true);
       // Save the presentation data before exporting
@@ -238,27 +241,93 @@ const PresentationHeader = ({
           }),
         });
 
+        const result = await response.json().catch(() => null);
         if (!response.ok) {
-          throw new Error("Failed to export PPTX");
+          throw new Error(result?.error || "Failed to export PPTX");
         }
 
-        const { path: pptxPath } = await response.json();
+        const pptxPath = result?.path;
         if (!pptxPath) {
           throw new Error("No path returned from export");
         }
 
         downloadLink(pptxPath, safePptxFileName);
       }
+
       notify.success(
-        "Export complete",
-        "Your PPTX file has been downloaded.",
+        t("Export complete"),
+        t("Your PPTX file has been downloaded."),
         { id: exportToastId }
       );
     } catch (error) {
       console.error("Export failed:", error);
       notify.error(
-        "Export failed",
-        "We are having trouble exporting your presentation. Please try again.",
+        t("Export failed"),
+        t("We are having trouble exporting your presentation. Please try again."),
+        exportToastId !== undefined ? { id: exportToastId } : undefined
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportDomToPptx = async () => {
+    if (isStreaming) return;
+
+    let exportToastId: string | number | undefined;
+    try {
+      trackEvent(MixpanelEvent.Presentation_Export_Started, {
+        pathname,
+        presentation_id,
+        format: "pptx-dom-to-pptx",
+        slide_count: presentationData?.slides?.length || 0,
+      });
+      exportToastId = notify.loading(
+        t("Exporting experimental PPTX"),
+        t("Using the dom-to-pptx engine for an editable export.")
+      );
+      setIsExporting(true);
+      await PresentationGenerationApi.updatePresentationContent(
+        presentationData
+      );
+      const safePptxFileName = buildSafeExportFileName(
+        presentationData?.title,
+        "pptx"
+      );
+      const safeExperimentalPptxFileName = safePptxFileName.replace(
+        /\.pptx$/i,
+        "-experimental.pptx"
+      );
+      const safePptxTitle = safeExperimentalPptxFileName.replace(/\.pptx$/i, "");
+      const response = await fetch("/api/export-presentation/dom-to-pptx", {
+        method: "POST",
+        body: JSON.stringify({
+          id: presentation_id,
+          title: safePptxTitle,
+        }),
+      });
+
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.error || "Failed to export experimental PPTX");
+      }
+
+      const pptxPath = result?.path;
+      if (!pptxPath) {
+        throw new Error("No path returned from experimental export");
+      }
+
+      downloadLink(pptxPath, safeExperimentalPptxFileName);
+      notify.success(
+        t("Export complete"),
+        t("Your experimental PPTX file has been downloaded."),
+        { id: exportToastId }
+      );
+    } catch (error) {
+      console.error("Experimental PPTX export failed:", error);
+      notify.error(
+        t("Experimental export failed"),
+        t("The dom-to-pptx export could not complete. The standard PPTX export is still available."),
         exportToastId !== undefined ? { id: exportToastId } : undefined
       );
     } finally {
@@ -278,8 +347,8 @@ const PresentationHeader = ({
         slide_count: presentationData?.slides?.length || 0,
       });
       exportToastId = notify.loading(
-        "Exporting PDF",
-        "Your presentation is being exported. This may take a moment."
+        t("Exporting PDF"),
+        t("Your presentation is being exported. This may take a moment.")
       );
       setIsExporting(true);
       // Save the presentation data before exporting
@@ -311,15 +380,15 @@ const PresentationHeader = ({
         }
       }
       notify.success(
-        "Export complete",
-        "Your PDF file has been downloaded.",
+        t("Export complete"),
+        t("Your PDF file has been downloaded."),
         { id: exportToastId }
       );
     } catch (err) {
       console.error(err);
       notify.error(
-        "Export failed",
-        "We are having trouble exporting your presentation. Please try again.",
+        t("Export failed"),
+        t("We are having trouble exporting your presentation. Please try again."),
         exportToastId !== undefined ? { id: exportToastId } : undefined
       );
     } finally {
@@ -351,7 +420,7 @@ const PresentationHeader = ({
     <div
       className={` rounded-[18px] max-md:mt-4 ${mobile ? "" : "bg-white"}  p-5`}
     >
-      <p className="text-sm font-medium text-[#19001F]">Export as</p>
+      <p className="text-sm font-medium text-[#19001F]">{t("Export as")}</p>
       <div className="my-[18px] h-[1px] bg-[#E8E8E8]" />
       <div className="space-y-3">
         <Button
@@ -378,6 +447,19 @@ const PresentationHeader = ({
           }`}
         >
           PPTX
+          <ArrowUpRight className="w-3.5 h-3.5" />
+        </Button>
+        <Button
+          onClick={() => {
+            handleExportDomToPptx();
+            setOpen(false);
+          }}
+          variant="ghost"
+          className={`w-full flex px-0 justify-start text-xs text-black hover:bg-transparent  ${
+            mobile ? "bg-white py-6" : ""
+          }`}
+        >
+          {t("Enhanced PPTX export (experimental)")}
           <ArrowUpRight className="w-3.5 h-3.5" />
         </Button>
       </div>
@@ -409,29 +491,29 @@ const PresentationHeader = ({
                 cancelTitleEdit();
               }
             }}
-            placeholder="Presentation title"
+            placeholder={t("Presentation title")}
             className="min-w-0 flex-1 bg-transparent py-2 pr-2 font-unbounded text-base leading-tight text-[#101323] placeholder:text-[#101323]/35 outline-none border-0 focus:ring-0"
-            aria-label="Presentation title"
+            aria-label={t("Presentation title")}
           />
           <div className="flex shrink-0 items-center gap-0.5 border-l border-[#EDECEC] pl-1 ml-0.5">
-            <ToolTip content="Save · Enter">
+            <ToolTip content={t("Save · Enter")}>
               <button
                 type="button"
                 onMouseDown={onTitleSaveMouseDown}
                 onClick={commitTitleEdit}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5141e5] hover:bg-[#5141e5]/10 transition-colors"
-                aria-label="Save title"
+                aria-label={t("Save title")}
               >
                 <Check className="h-4 w-4" strokeWidth={2.25} />
               </button>
             </ToolTip>
-            <ToolTip content="Cancel · Esc">
+            <ToolTip content={t("Cancel · Esc")}>
               <button
                 type="button"
                 onMouseDown={onTitleCancelMouseDown}
                 onClick={cancelTitleEdit}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-[#101323]/55 hover:bg-[#F6F6F9] hover:text-[#101323] transition-colors"
-                aria-label="Cancel editing title"
+                aria-label={t("Cancel editing title")}
               >
                 <X className="h-4 w-4" strokeWidth={2.25} />
               </button>
@@ -451,7 +533,7 @@ const PresentationHeader = ({
         >
           <h2 className="min-w-0 flex-1 font-unbounded text-lg w-[450px] leading-snug text-[#101323]">
             <MarkdownRenderer
-              content={presentationData?.title || "Presentation"}
+              content={presentationData?.title || t("Presentation")}
               className="mb-0 min-w-0 overflow-hidden text-ellipsis line-clamp-1 text-sm text-[#101323] prose-p:my-0 prose-headings:my-0"
             />
           </h2>
@@ -479,7 +561,7 @@ const PresentationHeader = ({
             className="w-10 h-10 cursor-pointer object-contain"
           />
           {presentationData && !isStreaming && !isEditingTitle ? (
-            <ToolTip content="Rename presentation">{titleBlock}</ToolTip>
+            <ToolTip content={t("Rename presentation")}>{titleBlock}</ToolTip>
           ) : (
             titleBlock
           )}
@@ -499,9 +581,10 @@ const PresentationHeader = ({
                 themes={themes}
               />
             )}
+          <LanguageSwitcher />
 
           <div className="flex items-center gap-2 bg-[#F6F6F9] px-3.5 h-[38px] border border-[#EDECEC] rounded-[80px]">
-            <ToolTip content="Regenerate Presentation">
+            <ToolTip content={t("Regenerate Presentation")}>
               <button
                 type="button"
                 onClick={() => setIsRegenerateConfirmOpen(true)}
@@ -511,7 +594,7 @@ const PresentationHeader = ({
               </button>
             </ToolTip>
             <Separator orientation="vertical" className="h-4" />
-            <ToolTip content="Undo">
+            <ToolTip content={t("Undo")}>
               <button
                 disabled={!canUndo}
                 className=" disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer group"
@@ -523,7 +606,7 @@ const PresentationHeader = ({
               </button>
             </ToolTip>
             <Separator orientation="vertical" className="h-4" />
-            <ToolTip content="Redo">
+            <ToolTip content={t("Redo")}>
               <button
                 disabled={!canRedo}
                 className=" disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer group"
@@ -535,7 +618,7 @@ const PresentationHeader = ({
               </button>
             </ToolTip>
             <Separator orientation="vertical" className="h-4 w-[2px]" />
-            <ToolTip content="Present">
+            <ToolTip content={t("Present")}>
               <button
                 onClick={() => {
                   const to = `?id=${presentation_id}&mode=present&slide=${
@@ -575,7 +658,7 @@ const PresentationHeader = ({
                 {isExporting ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  "Export"
+                  t("Export")
                 )}{" "}
                 <ArrowRightFromLine className="w-3.5 h-3.5" />
               </button>
@@ -599,11 +682,10 @@ const PresentationHeader = ({
               <AlertTriangle className="h-6 w-6 text-red-500" />
             </div>
             <DialogTitle className="text-lg font-semibold text-[#191919]">
-              Regenerate Presentation?
+              {t("Regenerate Presentation?")}
             </DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-gray-500">
-              This will replace the current slides with a newly generated
-              version and clear undo history. Your current edits may be lost.
+              {t("This will replace the current slides with a newly generated version and clear undo history. Your current edits may be lost.")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row border-t border-gray-100 p-0 sm:space-x-0">
@@ -613,7 +695,7 @@ const PresentationHeader = ({
               onClick={() => setIsRegenerateConfirmOpen(false)}
               className="h-auto flex-1 rounded-none rounded-bl-2xl px-4 py-3.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-700"
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               type="button"
@@ -621,7 +703,7 @@ const PresentationHeader = ({
               onClick={handleReGenerate}
               className="h-auto flex-1 rounded-none rounded-br-2xl border-l border-gray-100 px-4 py-3.5 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600"
             >
-              Regenerate
+              {t("Regenerate")}
             </Button>
           </DialogFooter>
         </DialogContent>

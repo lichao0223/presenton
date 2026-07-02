@@ -8,6 +8,7 @@ import { LoadingState, TABS } from "../types/index";
 import { TemplateLayoutsWithSettings } from "@/app/presentation-templates/utils";
 import { getCustomTemplateDetails } from "@/app/hooks/useCustomTemplates";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const DEFAULT_LOADING_STATE: LoadingState = {
   message: "",
@@ -25,6 +26,7 @@ export const usePresentationGeneration = (
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
   const [loadingState, setLoadingState] = useState<LoadingState>(
     DEFAULT_LOADING_STATE
   );
@@ -32,22 +34,22 @@ export const usePresentationGeneration = (
   const validateInputs = useCallback(() => {
     if (!outlines || outlines.length === 0) {
       notify.warning(
-        "Outlines not ready",
-        "Please wait for your outlines to finish generating before continuing."
+        t("Outlines not ready"),
+        t("Please wait for your outlines to finish generating before continuing.")
       );
       return false;
     }
 
     if (!selectedTemplate) {
       notify.warning(
-        "Layout not selected",
-        "Choose a layout group before generating your presentation."
+        t("Layout not selected"),
+        t("Choose a layout group before generating your presentation.")
       );
       return false;
     }
 
     return true;
-  }, [outlines, selectedTemplate]);
+  }, [outlines, selectedTemplate, t]);
 
   const clearTheme = () => {
     const element = document.getElementById("presentation-page");
@@ -130,7 +132,7 @@ export const usePresentationGeneration = (
           !customTemplateDetail ||
           customTemplateDetail.layouts.length === 0
         ) {
-          notify.error("Template error", "Failed to load custom template layouts.");
+          notify.error(t("Template error"), t("Failed to load custom template layouts."));
           return;
         }
 
@@ -189,8 +191,8 @@ export const usePresentationGeneration = (
     } catch (error: any) {
       console.error("Error In Presentation Generation(prepare).", error);
       notify.error(
-        "Generation error",
-        error.message || "Error in presentation generation."
+        t("Generation error"),
+        error.message || t("Error in presentation generation.")
       );
     } finally {
       setLoadingState(DEFAULT_LOADING_STATE);
@@ -203,6 +205,8 @@ export const usePresentationGeneration = (
     router,
     selectedTemplate,
     pathname,
+    setActiveTab,
+    t,
   ]);
 
   return { loadingState, handleSubmit };

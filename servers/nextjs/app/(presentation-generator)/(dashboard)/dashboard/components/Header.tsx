@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { ArrowLeft } from "lucide-react";
+import { LanguageSwitcher } from "@/i18n/LanguageSwitcher";
 
 const PATHS_WITH_HEADER_BACK = [
   "/upload",
@@ -51,7 +52,7 @@ const Header = () => {
               />
             </Link>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
             {showHeaderBack ? (
               <Link
                 href={backHref}
@@ -64,6 +65,7 @@ const Header = () => {
                 <span>{backLabel}</span>
               </Link>
             ) : null}
+            <LanguageSwitcher />
           </div>
         </div>
       </Wrapper>

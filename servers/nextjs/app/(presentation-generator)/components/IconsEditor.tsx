@@ -25,6 +25,7 @@ import { setPresentationData } from "@/store/slices/presentationGeneration";
 import { useDispatch, useSelector } from "react-redux";
 import { PresentationGenerationApi } from "../services/api/presentation-generation";
 import { notify } from "@/components/ui/sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const ICON_WEIGHTS = [
   "thin",
@@ -139,6 +140,7 @@ const IconsEditor = ({
   onClose,
   onIconChange,
 }: IconsEditorProps) => {
+  const { t } = useI18n();
   const dispatch = useDispatch();
   const presentationData = useSelector(
     (state: RootState) => state.presentationGeneration.presentationData
@@ -299,7 +301,7 @@ const IconsEditor = ({
         >
           <SheetHeader className="border-b border-[#EDEEEF] px-4 py-4 text-left">
             <SheetTitle className="text-sm font-semibold text-[#191919]">
-              Icon Customizer
+              {t("Icon Customizer")}
             </SheetTitle>
           </SheetHeader>
 
@@ -308,9 +310,9 @@ const IconsEditor = ({
               <div className="pb-5">
                 <div className="mb-[15px] flex items-center gap-1.5">
                   <p className="text-sn font-normal text-[#191919]">
-                    Icon Weight
+                    {t("Icon Weight")}
                   </p>
-                  <ToolTip content="Choose the visual weight used for icon search and replacement.">
+                  <ToolTip content={t("Choose the visual weight used for icon search and replacement.")}>
                     <button
                       type="button"
                       className="inline-flex h-4 w-4 items-center justify-center text-[#A1A1AA]"
@@ -373,7 +375,7 @@ const IconsEditor = ({
 
               <div className="flex items-center justify-between gap-3 pb-5">
                 <p className="text-sm font-medium text-[#191919] ">
-                  Apply styles to entire presentation
+                  {t("Apply styles to entire presentation")}
                 </p>
                 <Switch
                   checked={applyStylesToPresentation}
@@ -392,7 +394,7 @@ const IconsEditor = ({
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B9CA3]" />
                   <Input
-                    placeholder="Find an Icon"
+                    placeholder={t("Find an Icon")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
@@ -418,7 +420,7 @@ const IconsEditor = ({
                       <button
                         key={`${iconSrc}-${index}`}
                         type="button"
-                        aria-label={`Select icon ${index + 1}`}
+                        aria-label={t("Select icon {index}").replace("{index}", String(index + 1))}
                         aria-pressed={isSelected}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -442,9 +444,9 @@ const IconsEditor = ({
               ) : (
                 <div className="flex h-44 flex-col items-center justify-center text-center text-[#73737A]">
                   <Search className="mb-3 h-8 w-8 text-[#B7B8BE]" />
-                  <p className="text-[12px] font-medium">No icons found</p>
+                  <p className="text-[12px] font-medium">{t("No icons found")}</p>
                   <p className="mt-1 text-[11px]">
-                    Try a different search term.
+                    {t("Try a different search term.")}
                   </p>
                 </div>
               )}
@@ -464,7 +466,7 @@ const IconsEditor = ({
                 disabled={!selectedIconUrl && !currentIconUrl}
                 className="h-10 rounded-full  px-4 text-sm font-semibold text-[#101323] shadow-none hover:bg-[#F2DDAA] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Replace Icons
+                {t("Replace Icons")}
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>

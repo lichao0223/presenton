@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   Loader2,
   PlusIcon,
-  Trash2,
   Pencil,
   Trash,
   Sparkles,
@@ -28,6 +27,7 @@ import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
 import { addToHistory } from "@/store/slices/undoRedoSlice";
 import NewSlide from "./NewSlide";
 import SlideScale from "../../components/PresentationRender";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface SlideContentProps {
   slide: any;
@@ -43,6 +43,7 @@ const SlideContent = ({
   presentationId,
   isChatEditing = false,
 }: SlideContentProps) => {
+  const { t } = useI18n();
   const dispatch = useDispatch();
   const slideLayout = typeof slide?.layout === "string" ? slide.layout : "";
   const [isUpdating, setIsUpdating] = useState(false);
@@ -61,8 +62,8 @@ const SlideContent = ({
   const handleSubmit = async () => {
     if (!editPrompt.trim()) {
       notify.warning(
-        "Prompt required",
-        "Please enter a prompt before submitting."
+        t("Prompt required"),
+        t("Please enter a prompt before submitting.")
       );
       return;
     }
@@ -87,21 +88,21 @@ const SlideContent = ({
             .length,
         });
         notify.success(
-          "Slide updated",
-          "Your changes were applied to this slide."
+          t("Slide updated"),
+          t("Your changes were applied to this slide.")
         );
         setEditPrompt("");
       } else {
         notify.error(
-          "Slide edit failed",
-          "The server did not return an updated slide. Please try again."
+          t("Slide edit failed"),
+          t("The server did not return an updated slide. Please try again.")
         );
       }
     } catch (error: any) {
       console.error("Error in slide editing:", error);
       notify.error(
-        "Slide edit failed",
-        error.message || "Something went wrong while editing the slide."
+        t("Slide edit failed"),
+        error.message || t("Something went wrong while editing the slide.")
       );
     } finally {
       setIsUpdating(false);
@@ -112,8 +113,8 @@ const SlideContent = ({
     try {
       if ((presentationData?.slides?.length ?? 0) <= 1) {
         notify.warning(
-          "Cannot delete slide",
-          "A presentation must contain at least one slide."
+          t("Cannot delete slide"),
+          t("A presentation must contain at least one slide.")
         );
         return;
       }
@@ -136,8 +137,8 @@ const SlideContent = ({
     } catch (error: any) {
       console.error("Error deleting slide:", error);
       notify.error(
-        "Could not delete slide",
-        error.message || "Something went wrong while deleting the slide."
+        t("Could not delete slide"),
+        error.message || t("Something went wrong while deleting the slide.")
       );
     }
   };
@@ -182,7 +183,7 @@ const SlideContent = ({
                 />
                 <span className="relative z-10 flex items-center  gap-2">
                   <Sparkles className="h-4 w-4 text-[#9034EA]" />
-                  Updating slides...
+                  {t("Updating slides...")}
                 </span>
               </span>
             </div>
@@ -192,7 +193,7 @@ const SlideContent = ({
           </div>
           {!showNewSlideSelection && (
             <div className="group-hover:opacity-100 hidden md:block opacity-0 transition-opacity my-4 duration-300">
-              <ToolTip content="Add new slide below">
+              <ToolTip content={t("Add new slide below")}>
                 {!isStreaming && (
                   <div
                     onClick={() => {
@@ -247,7 +248,7 @@ const SlideContent = ({
                     type="button"
                     className="flex px-3.5 py-2.5 items-center justify-center rounded-full bg-[#F7F6F9] font-syne"
                   >
-                    <ToolTip content="Update slide using prompt">
+                    <ToolTip content={t("Update slide using prompt")}>
                       <Pencil className="h-4 w-4" />
                     </ToolTip>
                   </button>
@@ -260,10 +261,10 @@ const SlideContent = ({
                 >
                   <div className="border-b border-gray-100 px-4 py-3">
                     <p className="text-sm font-semibold text-gray-900">
-                      Update slide
+                      {t("Update slide")}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
-                      Describe how this slide should be improved.
+                      {t("Describe how this slide should be improved.")}
                     </p>
                   </div>
                   <form
@@ -276,7 +277,7 @@ const SlideContent = ({
                     <Textarea
                       id={`slide-${slide.index}-prompt`}
                       value={editPrompt}
-                      placeholder="Enter your prompt here..."
+                      placeholder={t("Enter your prompt here...")}
                       className="min-h-[110px] max-h-[180px] w-full resize-none rounded-xl border border-gray-200 p-3 text-sm focus-visible:ring-1 focus-visible:ring-[#5141e5]"
                       disabled={isUpdating}
                       onChange={(e) => setEditPrompt(e.target.value)}
@@ -298,7 +299,7 @@ const SlideContent = ({
                           : "hover:opacity-90"
                       }`}
                     >
-                      {isUpdating ? "Updating..." : "Update"}
+                      {isUpdating ? t("Updating...") : t("Update")}
                       <SendHorizontal className="h-4 w-4" />
                     </button>
                   </form>
@@ -323,7 +324,7 @@ const SlideContent = ({
                           : "border-gray-200 bg-white text-gray-600"
                       }`}
                     >
-                      <ToolTip content="Edit speaker notes">
+                      <ToolTip content={t("Edit speaker notes")}>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           width="14"
@@ -364,7 +365,7 @@ const SlideContent = ({
                   >
                     <div className="border-b border-gray-100 px-4 py-3">
                       <p className="text-sm font-semibold text-gray-900">
-                        Speaker notes
+                        {t("Speaker notes")}
                       </p>
                     </div>
                     <div className="space-y-3 p-4">
@@ -381,7 +382,7 @@ const SlideContent = ({
                 onClick={onDeleteSlide}
                 className="flex px-4 py-2.5 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 font-syne"
               >
-                <ToolTip content="Delete slide">
+                <ToolTip content={t("Delete slide")}>
                   <Trash className="h-4 w-4" />
                 </ToolTip>
               </button>

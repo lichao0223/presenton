@@ -78,6 +78,10 @@ def is_likely_vision_capability_error(exc: BaseException) -> bool:
         "content blocks of type image",
         "type 'image'",
         "modality image",
+        "messages.content.type",
+        "content.type 参数非法",
+        "取值范围 ['text']",
+        '取值范围 ["text"]',
     )
     if any(s in blob for s in strong):
         return True

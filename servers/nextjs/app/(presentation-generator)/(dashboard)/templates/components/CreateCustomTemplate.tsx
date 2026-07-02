@@ -2,8 +2,10 @@ import { Plus, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation';
 import React from 'react'
 import { trackEvent, MixpanelEvent } from "@/utils/mixpanel";
+import { useI18n } from '@/i18n/I18nProvider';
 
 const CreateCustomTemplate = () => {
+    const { t } = useI18n();
     const router = useRouter();
     return (
         <div
@@ -30,8 +32,8 @@ const CreateCustomTemplate = () => {
                     <Sparkles className='w-6 h-6 text-white' />
                 </div>
                 <div>
-                    <h4 className='text-[#191919] text-sm font-semibold '>Build Template</h4>
-                    <p className='flex text-[#808080] text-sm  font-medium items-center gap-2'>Build Your Own Template</p>
+                    <h4 className='text-[#191919] text-sm font-semibold '>{t("Build Template")}</h4>
+                    <p className='flex text-[#808080] text-sm  font-medium items-center gap-2'>{t("Build Your Own Template")}</p>
                 </div>
 
             </div>

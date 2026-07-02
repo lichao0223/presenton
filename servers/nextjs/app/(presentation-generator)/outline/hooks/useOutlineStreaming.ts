@@ -5,6 +5,7 @@ import { setOutlines } from "@/store/slices/presentationGeneration";
 import { jsonrepair } from "jsonrepair";
 import { RootState } from "@/store/store";
 import { getApiUrl } from "@/utils/api";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const MAX_STREAM_RETRIES = 3;
 const STREAM_RETRY_DELAY_MS = 1_000;
@@ -15,6 +16,7 @@ export const useOutlineStreaming = (
   enabled = true
 ) => {
   const dispatch = useDispatch();
+  const { t } = useI18n();
   const { outlines } = useSelector(
     (state: RootState) => state.presentationGeneration
   );
@@ -111,8 +113,8 @@ export const useOutlineStreaming = (
           if (!scheduleRetry("invalid SSE payload")) {
             resetStreamingState();
             notify.error(
-              "Stream parse failed",
-              "Failed to parse outline stream response."
+              t("Stream parse failed"),
+              t("Failed to parse outline stream response.")
             );
           }
           return;
@@ -188,7 +190,7 @@ export const useOutlineStreaming = (
             } catch {
               if (!scheduleRetry("failed to parse complete payload")) {
                 resetStreamingState();
-                notify.error("Parse failed", "Failed to parse presentation data.");
+                notify.error(t("Parse failed"), t("Failed to parse presentation data."));
               }
             }
             accumulatedChunks = "";
@@ -207,9 +209,9 @@ export const useOutlineStreaming = (
               resetStreamingState();
               closeEventSource();
               notify.error(
-                "Outline streaming failed",
+                t("Outline streaming failed"),
                 data.detail ||
-                  "Failed to connect to the server. Please try again."
+                  t("Failed to connect to the server. Please try again.")
               );
             }
             break;
@@ -221,8 +223,8 @@ export const useOutlineStreaming = (
           resetStreamingState();
           closeEventSource();
           notify.error(
-            "Connection failed",
-            "Failed to connect to the server. Please try again."
+            t("Connection failed"),
+            t("Failed to connect to the server. Please try again.")
           );
         }
       };
@@ -238,7 +240,7 @@ export const useOutlineStreaming = (
       closeEventSource();
       clearRetryTimer();
     };
-  }, [presentationId, dispatch, enabled]);
+  }, [presentationId, dispatch, enabled, t]);
 
   return {
     isStreaming,

@@ -8,9 +8,9 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { PresentationGenerationApi } from "../services/api/presentation-generation";
 import { toast } from "sonner";
-import { Edit, Loader2, Sparkles } from "lucide-react";
+import { Edit, Sparkles } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type HtmlSelectionEditorProps = {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -23,6 +23,7 @@ const HtmlSelectionEditor = ({
   slide,
   enableEditMode = false,
 }: HtmlSelectionEditorProps) => {
+  const { t } = useI18n();
   const dispatch = useDispatch();
   const enableHtmlSelector = useSelector(
     (s: any) => s?.presentationGeneration?.enableHtmlSelector
@@ -627,11 +628,11 @@ const HtmlSelectionEditor = ({
                 e.stopPropagation();
                 activateEditor();
               }}
-              aria-label="Open AI Editor"
-              title="AI Edit"
+              aria-label={t("Open AI Editor")}
+              title={t("AI Edit")}
             >
               <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              <span>AI Edit</span>
+              <span>{t("AI Edit")}</span>
             </button>
           )}
           <div
@@ -673,7 +674,7 @@ const HtmlSelectionEditor = ({
                   className="inline-flex items-center bg-white/80 rounded-md px-2 py-1 gap-2 text-xs font-medium text-gray-900"
                 >
                   <Edit className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Double-click for AI edit</span>
+                  <span>{t("Double-click for AI edit")}</span>
                 </div>
               </div>
             )}
@@ -722,7 +723,7 @@ const HtmlSelectionEditor = ({
             <div className="h-1 -mx-4 -mt-4 mb-3 bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-purple-500" />
             <div className="flex items-center gap-3">
               <p className="text-sm text-black font-syne font-semibold">
-                Edit selection
+                {t("Edit selection")}
               </p>
             </div>
 
@@ -734,7 +735,7 @@ const HtmlSelectionEditor = ({
                 id="selection-editor-prompt"
                 name="selection-editor-prompt"
                 onChange={(e) => setPromptValue(e.target.value)}
-                placeholder="Explain the changes you want to make to the selection eg. make the heading larger"
+                placeholder={t("Explain the changes you want to make to the selection eg. make the heading larger")}
                 className="w-full p-2 rounded-md border border-gray-200 bg-white text-black placeholder-gray-400 outline-none resize-y focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -758,7 +759,7 @@ const HtmlSelectionEditor = ({
                 style={{ cursor: "pointer" }}
                 className="px-4 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 "
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 onClick={handleSubmitEdit}
@@ -766,7 +767,7 @@ const HtmlSelectionEditor = ({
                 disabled={updatingSelection}
                 className="px-4 py-1 rounded-md bg-[#5141e5] text-white hover:bg-[#4336c9] disabled:opacity-50 "
               >
-                {updatingSelection ? "Updating..." : "Apply"}
+                {updatingSelection ? t("Updating...") : t("Apply")}
               </button>
             </div>
           </div>

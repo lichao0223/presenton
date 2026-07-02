@@ -11,9 +11,10 @@ import {
     UploadedFont,
     ProcessedSlide,
 } from "../types";
-import { getApiUrl } from "@/utils/api";
+import { getApiUrl, getDirectApiUrl } from "@/utils/api";
 import { MixpanelEvent, trackEvent } from "@/utils/mixpanel";
 import { validateLayoutCodeForClient } from "../utils/layoutCodeValidation";
+import { useI18n } from "@/i18n/I18nProvider";
 
 /** Must match `VISION_LAYOUT_ERROR_MARKER` in FastAPI `utils/template_vision_errors.py`. */
 const TEMPLATE_VISION_MODEL_MARKER = "TEMPLATE_VISION_MODEL_REQUIRED";
@@ -32,9 +33,20 @@ const initialState: TemplateCreationState = {
 
 
 export const useTemplateCreation = () => {
+    const { t } = useI18n();
     const [state, setState] = useState<TemplateCreationState>(initialState);
     const [uploadedFonts, setUploadedFonts] = useState<UploadedFont[]>([]);
     const [slides, setSlides] = useState<ProcessedSlide[]>([]);
+
+    const formatMessage = useCallback((
+        key: string,
+        values: Record<string, string | number>
+    ) => {
+        return Object.entries(values).reduce(
+            (message, [name, value]) => message.replaceAll(`{${name}}`, String(value)),
+            t(key)
+        );
+    }, [t]);
 
     // Helper to update state partially
     const updateState = useCallback((updates: Partial<TemplateCreationState>) => {
@@ -83,19 +95,22 @@ export const useTemplateCreation = () => {
 
             return data;
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Font check failed";
+            const errorMessage = error instanceof Error ? error.message : t("Font check failed");
             updateState({ error: errorMessage, isLoading: false });
-            notify.error("Font check failed", errorMessage);
+            notify.error(t("Font check failed"), errorMessage);
             return null;
         }
-    }, [updateState]);
+    }, [t, updateState]);
 
 
     const uploadFont = useCallback((fontName: string, file: File): string | null => {
         // Check if font is already added
         const existingFont = uploadedFonts.find((f) => f.fontName === fontName);
         if (existingFont) {
-            notify.warning("Font already added", `Font "${fontName}" is already in your upload list.`);
+            notify.warning(
+                t("Font already added"),
+                formatMessage('Font "{font}" is already in your upload list.', { font: fontName })
+            );
             return fontName;
         }
 
@@ -104,14 +119,17 @@ export const useTemplateCreation = () => {
         const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
 
         if (!validExtensions.includes(fileExtension)) {
-            notify.error("Invalid font file", "Please upload .ttf, .otf, .woff, .woff2, or .eot files.");
+            notify.error(
+                t("Invalid font file"),
+                t("Please upload .ttf, .otf, .woff, .woff2, or .eot files.")
+            );
             return null;
         }
 
         // Validate file size (10MB limit)
         const maxSize = 10 * 1024 * 1024;
         if (file.size > maxSize) {
-            notify.error("File too large", "Font file size must be less than 10MB.");
+            notify.error(t("File too large"), t("Font file size must be less than 10MB."));
             return null;
         }
 
@@ -124,15 +142,18 @@ export const useTemplateCreation = () => {
         };
 
         setUploadedFonts(prev => [...prev, newFont]);
-        notify.success("Font added", `Font "${fontName}" was added successfully.`);
+        notify.success(
+            t("Font added"),
+            formatMessage('Font "{font}" was added successfully.', { font: fontName })
+        );
         return fontName;
-    }, [uploadedFonts]);
+    }, [formatMessage, t, uploadedFonts]);
 
     // Remove a font
     const removeFont = useCallback((fontName: string) => {
         setUploadedFonts(prev => prev.filter(font => font.fontName !== fontName));
-        notify.info("Font removed", "The font was removed from your upload list.");
-    }, []);
+        notify.info(t("Font removed"), t("The font was removed from your upload list."));
+    }, [t]);
 
     // Get all unsupported fonts that need upload
     const getUnsupportedFonts = useCallback((): string[] => {
@@ -176,7 +197,7 @@ export const useTemplateCreation = () => {
             });
 
             const response = await fetch(
-                getApiUrl(`/api/v1/ppt/template/fonts-upload-and-slides-preview`),
+                getDirectApiUrl(`/api/v1/ppt/template/fonts-upload-and-slides-preview`),
                 {
                     method: "POST",
                     headers: getHeaderForFormData(),
@@ -195,27 +216,27 @@ export const useTemplateCreation = () => {
                 isLoading: false
             });
 
-            notify.success("Preview generated", "Slides preview was generated successfully.");
+            notify.success(t("Preview generated"), t("Slides preview was generated successfully."));
             return data;
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Preview generation failed";
+            const errorMessage = error instanceof Error ? error.message : t("Preview generation failed");
             updateState({ error: errorMessage, isLoading: false });
-            notify.error("Preview failed", errorMessage);
+            notify.error(t("Preview failed"), errorMessage);
             return null;
         }
-    }, [uploadedFonts, updateState]);
+    }, [t, uploadedFonts, updateState]);
 
     // Step 3: Initialize template creation
     const initTemplateCreation = useCallback(async (): Promise<string | null> => {
         if (!state.previewData) {
-            notify.error("No preview data", "Generate a preview before continuing.");
+            notify.error(t("No preview data"), t("Generate a preview before continuing."));
             return null;
         }
 
         updateState({ isLoading: true, error: null, step: 'template-creation' });
 
         try {
-            const response = await fetch(getApiUrl(`/api/v1/ppt/template/create/init`), {
+            const response = await fetch(getDirectApiUrl(`/api/v1/ppt/template/create/init`), {
                 method: "POST",
                 headers: getHeader(),
                 body: JSON.stringify({
@@ -253,7 +274,10 @@ export const useTemplateCreation = () => {
                 uploaded_font_count: state.previewData.fonts?.length || 0,
             });
 
-            notify.success("Template initialized", "Template creation was initialized successfully.");
+            notify.success(
+                t("Template initialized"),
+                t("Template creation was initialized successfully.")
+            );
 
             // Automatically start processing the first slide
             if (typeof data === 'string') {
@@ -264,14 +288,14 @@ export const useTemplateCreation = () => {
 
             return typeof data === 'string' ? data : data.id;
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Initialization failed";
+            const errorMessage = error instanceof Error ? error.message : t("Initialization failed");
             updateState({ error: errorMessage, isLoading: false });
-            notify.error("Initialization failed", errorMessage);
+            notify.error(t("Initialization failed"), errorMessage);
             // reset the state
             reset();
             return null;
         }
-    }, [state.previewData, updateState]);
+    }, [t, state.previewData, updateState, reset]);
 
     // Step 4: Create slide layout for a specific slide (with auto-advance for initial processing)
     const createSlideLayout = useCallback(async (
@@ -290,7 +314,7 @@ export const useTemplateCreation = () => {
 
         try {
             const startResponse = await fetch(
-                getApiUrl(`/api/v1/ppt/template/slide-layout/create/start`),
+                getDirectApiUrl(`/api/v1/ppt/template/slide-layout/create/start`),
                 {
                     method: "POST",
                     headers: getHeader(),
@@ -314,7 +338,7 @@ export const useTemplateCreation = () => {
 
             while (Date.now() < deadline) {
                 const statusResponse = await fetch(
-                    getApiUrl(`/api/v1/ppt/template/slide-layout/create/job/${encodeURIComponent(jobId)}`),
+                    getDirectApiUrl(`/api/v1/ppt/template/slide-layout/create/job/${encodeURIComponent(jobId)}`),
                     { headers: getHeader() }
                 );
                 const statusData = await ApiResponseHandler.handleResponse(
@@ -385,20 +409,32 @@ export const useTemplateCreation = () => {
                             const processedCount = newSlides.filter(s => s.processed).length;
                             if (failedCount > 0) {
                                 notify.warning(
-                                    "Some slides could not be processed",
-                                    `${processedCount} of ${newSlides.length} slides were reconstructed. ${failedCount} slide(s) failed — review them and try again.`
+                                    t("Some slides could not be processed"),
+                                    formatMessage(
+                                        "{processed} of {total} slides were reconstructed. {failed} slide(s) failed — review them and try again.",
+                                        {
+                                            processed: processedCount,
+                                            total: newSlides.length,
+                                            failed: failedCount,
+                                        }
+                                    )
                                 );
                             } else {
                                 notify.success(
-                                    "All slides processed",
-                                    "Every slide was reconstructed successfully."
+                                    t("All slides processed"),
+                                    t("Every slide was reconstructed successfully.")
                                 );
                             }
                         }
                     }
                 } else {
                     // Single slide reconstruction - just show success
-                    notify.success("Slide reconstructed", `Slide ${slideIndex + 1} was reconstructed successfully.`);
+                    notify.success(
+                        t("Slide reconstructed"),
+                        formatMessage("Slide {slide} was reconstructed successfully.", {
+                            slide: slideIndex + 1,
+                        })
+                    );
                 }
 
                 return newSlides;
@@ -446,17 +482,20 @@ export const useTemplateCreation = () => {
                     .trim()
                     .replace(/^\n+/, "");
                 notify.error(
-                    "Vision-capable text model required",
+                    t("Vision-capable text model required"),
                     description ||
-                        "Choose a text model that accepts images in Settings, save, and try again.",
+                        t("Choose a text model that accepts images in Settings, save, and try again."),
                     { duration: 12_000 }
                 );
             } else {
-                notify.error(`Slide ${slideIndex + 1} failed`, errorMessage);
+                notify.error(
+                    formatMessage("Slide {slide} failed", { slide: slideIndex + 1 }),
+                    errorMessage
+                );
             }
             return null;
         }
-    }, [updateState]);
+    }, [formatMessage, t, updateState]);
 
     // Reconstruct a single slide (no auto-advance)
     const retrySlide = useCallback((slideIndex: number) => {

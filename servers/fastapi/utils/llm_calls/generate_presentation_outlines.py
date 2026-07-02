@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 import logging
+import re
 from typing import Optional
 
 from llmai import get_client
@@ -12,15 +13,21 @@ from llmai.shared import (
     UserMessage,
     WebSearchTool,
 )
+from openai import AsyncOpenAI
 
+from enums.llm_provider import LLMProvider
 from models.presentation_outline_model import PresentationOutlineModel
+from utils.available_models import normalize_openai_compatible_base_url
+from utils.get_env import get_custom_llm_api_key_env, get_custom_llm_url_env
 from utils.get_dynamic_models import get_presentation_outline_model_with_n_slides
 from utils.llm_calls.generate_web_search_query import generate_web_search_query
 from utils.llm_client_error_handler import handle_llm_client_exceptions
-from utils.llm_config import get_llm_config
-from utils.llm_provider import get_model
+from utils.llm_config import get_extra_body, get_llm_config
+from utils.llm_provider import get_llm_provider, get_model
 from utils.llm_utils import (
+    extract_text,
     get_generate_kwargs,
+    message_content_to_text,
     serialize_structured_content,
     stream_generate_events,
 )
@@ -35,11 +42,121 @@ from utils.web_search import (
 )
 
 LOGGER = logging.getLogger(__name__)
+MAX_OUTLINE_LOG_CHARS = 12000
 
 
 @dataclass(frozen=True)
 class OutlineGenerationStatus:
     message: str
+
+
+def _log_preview(value: str | None) -> str:
+    if not value:
+        return ""
+    if len(value) <= MAX_OUTLINE_LOG_CHARS:
+        return value
+    return value[:MAX_OUTLINE_LOG_CHARS] + "... [truncated]"
+
+
+def _event_text_preview(event) -> str:
+    chunk = getattr(event, "chunk", None)
+    if isinstance(chunk, str) and chunk:
+        return _log_preview(chunk)
+
+    content = getattr(event, "content", None)
+    serialized = serialize_structured_content(content)
+    if serialized:
+        return _log_preview(serialized)
+
+    text = extract_text(content)
+    if text:
+        return _log_preview(text)
+
+    thinking = getattr(event, "thinking", None)
+    if isinstance(thinking, str) and thinking:
+        return _log_preview(thinking)
+
+    reasoning_content = getattr(event, "reasoning_content", None)
+    if isinstance(reasoning_content, str) and reasoning_content:
+        return _log_preview(reasoning_content)
+
+    return ""
+
+
+def _extract_json_object_text(text: str) -> str:
+    cleaned = text.strip()
+    fence_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
+    if fence_match:
+        return fence_match.group(1).strip()
+    first = cleaned.find("{")
+    last = cleaned.rfind("}")
+    if first != -1 and last != -1 and last > first:
+        return cleaned[first : last + 1].strip()
+    return cleaned
+
+
+def _outline_messages_to_openai(messages: list[Message]) -> list[dict[str, str]]:
+    converted: list[dict[str, str]] = []
+    for message in messages:
+        role = "system" if isinstance(message, SystemMessage) else "user"
+        content = message_content_to_text(message.content) or ""
+        if content:
+            converted.append({"role": role, "content": content})
+    return converted
+
+
+async def _generate_custom_outline_json_fallback(
+    *,
+    model: str,
+    messages: list[Message],
+    n_slides: Optional[int],
+) -> Optional[str]:
+    base_url = normalize_openai_compatible_base_url(get_custom_llm_url_env() or "")
+    if not base_url:
+        return None
+
+    requested_slide_count = (
+        str(n_slides)
+        if n_slides is not None
+        else "6-8 unless the user explicitly requested a different count"
+    )
+    fallback_messages = _outline_messages_to_openai(messages)
+    fallback_messages.append(
+        {
+            "role": "user",
+            "content": (
+                "The previous structured-output attempt produced no usable content. "
+                "Return JSON only, with this exact shape: "
+                '{"slides":[{"content":"markdown for slide 1"},'
+                '{"content":"markdown for slide 2"}]}. '
+                "Do not wrap the JSON in markdown fences. "
+                "Do not include any keys except slides and content. "
+                f"Generate {requested_slide_count} slides. "
+                "Each content value must be Markdown for one slide and at least 100 characters."
+            ),
+        }
+    )
+
+    kwargs = {
+        "model": model,
+        "messages": fallback_messages,
+        "max_tokens": 8192,
+        "temperature": 0,
+    }
+    extra_body = get_extra_body()
+    if extra_body:
+        kwargs["extra_body"] = extra_body
+
+    client = AsyncOpenAI(
+        api_key=(get_custom_llm_api_key_env() or "").strip() or "EMPTY",
+        base_url=base_url,
+    )
+    response = await client.chat.completions.create(**kwargs)
+    message = response.choices[0].message if response.choices else None
+    content = getattr(message, "content", None)
+    if not isinstance(content, str) or not content.strip():
+        return None
+    return _extract_json_object_text(content)
 
 
 def _web_search_provider_display_name(provider_name: str) -> str:
@@ -331,36 +448,67 @@ async def generate_ppt_outline(
             strict=True,
         )
         emitted_content = False
+        outline_messages = get_messages(
+            content,
+            n_slides,
+            language,
+            additional_context,
+            tone,
+            verbosity,
+            instructions,
+            include_title_slide,
+            include_table_of_contents,
+        )
         async for event in stream_generate_events(
             client,
             **get_generate_kwargs(
                 model=model,
-                messages=get_messages(
-                    content,
-                    n_slides,
-                    language,
-                    additional_context,
-                    tone,
-                    verbosity,
-                    instructions,
-                    include_title_slide,
-                    include_table_of_contents,
-                ),
+                messages=outline_messages,
                 response_format=response_format,
                 tools=([WebSearchTool()] if use_search_tool else None),
                 stream=True,
             ),
         ):
-            if getattr(event, "type", None) == "content":
+            event_type = getattr(event, "type", None)
+            event_preview = _event_text_preview(event)
+            LOGGER.info(
+                "Outline LLM stream event: type=%s class=%s preview=%r",
+                event_type,
+                event.__class__.__name__,
+                event_preview,
+            )
+
+            if event_type == "content":
                 chunk = getattr(event, "chunk", None)
                 if chunk:
                     emitted_content = True
+                    LOGGER.info("Outline LLM content chunk: %r", _log_preview(chunk))
                     yield chunk
             elif (
                 isinstance(event, ResponseStreamCompletionChunk) and not emitted_content
             ):
                 final_content = serialize_structured_content(event.content)
+                LOGGER.info(
+                    "Outline LLM completion fallback content: %r",
+                    _log_preview(final_content),
+                )
                 if final_content:
                     yield final_content
+        if not emitted_content and get_llm_provider() == LLMProvider.CUSTOM:
+            LOGGER.warning(
+                "Outline structured stream produced no content; trying custom "
+                "OpenAI-compatible JSON fallback."
+            )
+            fallback_content = await _generate_custom_outline_json_fallback(
+                model=model,
+                messages=outline_messages,
+                n_slides=n_slides,
+            )
+            LOGGER.warning(
+                "Outline custom fallback content: %r",
+                _log_preview(fallback_content),
+            )
+            if fallback_content:
+                yield fallback_content
     except Exception as e:
         yield handle_llm_client_exceptions(e)

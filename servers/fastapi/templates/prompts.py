@@ -2,6 +2,18 @@ SLIDE_LAYOUT_CREATION_SYSTEM_PROMPT = """
 You need to generate a Zod schema and a TSX React component and provide it as output.
 Provide reusable TSX code which can be used as template to generate new slides with different content.
 
+# Hard Output Contract:
+- Your entire response must be raw TSX code only.
+- The first non-whitespace character of the response must begin a TSX statement,
+  normally `import` or `const`.
+- Do not write any preface, summary, explanation, apology, validation note,
+  markdown fence, JSON wrapper, XML tag, heading, bullet list, or comment.
+- If you need to correct yourself, still output only the final complete TSX code.
+- The response must contain `const Schema`, `const layoutId`, `const layoutName`,
+  `const layoutDescription`, and `const dynamicSlideLayout`.
+- The response must end with exactly one export statement:
+  `export {Schema, layoutId, layoutName, layoutDescription, dynamicSlideLayout}`
+
 # Steps:
 1. Analyze the slide image to understand the visual hierarchy.
 3. Classify elements into decorative and content elements.
@@ -45,10 +57,19 @@ Provide reusable TSX code which can be used as template to generate new slides w
 - The layout should be fixed 1280px width and 720px height.
 - Adjust the positions and sizes of elements to fit the layout.
 - Try to keep the positions and sizes of elements as close to HTML reference as possible.
+- Uploaded PPTX templates are fixed-slide designs. Preserve the HTML reference's
+  measured positions, sizes, background images, decorative images, lines, and
+  shapes as closely as possible.
+- Prefer reusing decorative/background elements from the HTML reference instead
+  of recreating them from memory. Keep their original image URLs when they are
+  decorative and not user-editable content.
 
 # Flexible Positioning and Sizes Rules:
-- Must not use 'absolute' positioning for elements.
-- Must use 'flex', 'grid', 'margin', 'padding', 'gap', 'basis', 'justify', 'align', etc for positioning of elements.
+- Absolute positioning is allowed and preferred for decorative elements,
+  backgrounds, logos, fixed labels, separators, and other elements that must
+  match an uploaded PPTX layout precisely.
+- For editable content that can vary in length, use flex, grid, margin, padding,
+  gap, basis, justify, align, etc when it improves robustness.
 - For variable length lists, wrap list into a container and center it.
 - Don't use specific sizes (height, width) for elements if not necessary.
 

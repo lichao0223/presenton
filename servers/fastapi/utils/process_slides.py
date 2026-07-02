@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import time
 from typing import List, Optional
 from models.image_prompt import ImagePrompt
 from models.sql.image_asset import ImageAsset
@@ -12,6 +14,9 @@ from utils.asset_directory_utils import (
 from utils.dict_utils import get_dict_at_path, get_dict_paths_with_key, set_dict_at_path
 from utils.icon_weights import DEFAULT_ICON_WEIGHT, normalize_icon_weight
 from utils.image_generation_error import image_generation_warning
+
+
+logger = logging.getLogger(__name__)
 
 
 async def process_slide_and_fetch_assets(
@@ -29,6 +34,13 @@ async def process_slide_and_fetch_assets(
 
     image_paths = get_dict_paths_with_key(slide.content, "__image_prompt__")
     icon_paths = get_dict_paths_with_key(slide.content, "__icon_query__")
+    started_at = time.perf_counter()
+    logger.info(
+        "Slide asset generation started slide_index=%s images=%s icons=%s",
+        slide.index,
+        len(image_paths),
+        len(icon_paths),
+    )
 
     for image_index, image_path in enumerate(image_paths):
         __image_prompt__parent = get_dict_at_path(slide.content, image_path)
@@ -63,19 +75,29 @@ async def process_slide_and_fetch_assets(
         )
         async_task_meta.append(("icon", icon_path))
 
-    results = (
-        await asyncio.gather(*async_tasks, return_exceptions=allow_image_fallback)
-        if async_tasks
-        else []
-    )
+    try:
+        results = (
+            await asyncio.gather(*async_tasks, return_exceptions=allow_image_fallback)
+            if async_tasks
+            else []
+        )
+    except Exception:
+        logger.exception(
+            "Slide asset generation failed slide_index=%s elapsed=%.2fs",
+            slide.index,
+            time.perf_counter() - started_at,
+        )
+        raise
 
     return_assets = []
+    image_failure_count = 0
     for (task_type, asset_path), result in zip(async_task_meta, results):
         if task_type == "image":
             image_dict = get_dict_at_path(slide.content, asset_path)
             if isinstance(result, BaseException):
                 if not allow_image_fallback:
                     raise result
+                image_failure_count += 1
                 image_dict["__image_url__"] = normalize_slide_asset_url(
                     "/static/images/placeholder.jpg"
                 )
@@ -106,6 +128,15 @@ async def process_slide_and_fetch_assets(
             )
         set_dict_at_path(slide.content, asset_path, icon_dict)
 
+    logger.info(
+        "Slide asset generation completed slide_index=%s elapsed=%.2fs images=%s icons=%s image_failures=%s generated_assets=%s",
+        slide.index,
+        time.perf_counter() - started_at,
+        len(image_paths),
+        len(icon_paths),
+        image_failure_count,
+        len(return_assets),
+    )
     return return_assets
 
 

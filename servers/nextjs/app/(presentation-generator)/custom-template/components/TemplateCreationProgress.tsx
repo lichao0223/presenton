@@ -8,6 +8,7 @@ import {
     Loader2,
 } from "lucide-react";
 import { TemplateCreationStep } from "../types";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface TemplateCreationProgressProps {
     currentStep: TemplateCreationStep;
@@ -54,6 +55,8 @@ export const TemplateCreationProgress: React.FC<TemplateCreationProgressProps> =
     totalSlides = 0,
     processedSlides = 0,
 }) => {
+    const { t } = useI18n();
+
     const getCurrentStepIndex = () => {
         if (currentStep === 'font-upload') return 1;
         const stepIndex = steps.findIndex(s => s.id === currentStep);
@@ -115,7 +118,7 @@ export const TemplateCreationProgress: React.FC<TemplateCreationProgressProps> =
                                         }
                   `}
                                 >
-                                    {step.label}
+                                    {t(step.label)}
                                 </span>
                             </div>
 
@@ -140,7 +143,7 @@ export const TemplateCreationProgress: React.FC<TemplateCreationProgressProps> =
                 <div className="mt-6 p-4 bg-[#F9FAFB] rounded-xl border border-[#E5E7EB]">
                     <div className="flex items-center justify-between mb-2">
                         <span className="text-sm text-[#374151]">
-                            Processing slides
+                            {t("Processing slides")}
                         </span>
                         <span className="text-sm font-medium text-[#374151]">
                             {processedSlides} / {totalSlides}

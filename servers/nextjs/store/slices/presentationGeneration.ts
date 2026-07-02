@@ -81,6 +81,48 @@ const presentationGenerationSlice = createSlice({
     setPresentationData: (state, action: PayloadAction<PresentationData>) => {
       state.presentationData = action.payload;
     },
+    upsertStreamingSlide: (
+      state,
+      action: PayloadAction<{ presentation: Partial<PresentationData>; slide: Slide; index: number }>
+    ) => {
+      const incomingPresentation = action.payload.presentation;
+      if (!state.presentationData) {
+        state.presentationData = {
+          id: incomingPresentation.id ?? "",
+          language: incomingPresentation.language ?? "",
+          layout: incomingPresentation.layout ?? {
+            name: "",
+            ordered: false,
+            slides: [],
+          },
+          n_slides: incomingPresentation.n_slides ?? 0,
+          title: incomingPresentation.title ?? "",
+          slides: [],
+          theme: incomingPresentation.theme ?? null,
+        };
+      } else {
+        state.presentationData = {
+          ...state.presentationData,
+          ...incomingPresentation,
+          slides: state.presentationData.slides ?? [],
+        };
+      }
+
+      const slides = state.presentationData.slides ?? [];
+      const existingIndex = slides.findIndex(
+        (slide: any) => slide.index === action.payload.index
+      );
+
+      if (existingIndex >= 0) {
+        slides[existingIndex] = action.payload.slide;
+      } else {
+        slides.push(action.payload.slide);
+      }
+
+      state.presentationData.slides = slides.sort(
+        (a: any, b: any) => (a.index ?? 0) - (b.index ?? 0)
+      );
+    },
     updateTitle: (state, action: PayloadAction<string>) => {
       if (state.presentationData) {
         state.presentationData.title = action.payload;
@@ -413,6 +455,7 @@ export const {
   clearOutlines,
   deleteSlideOutline,
   setPresentationData,
+  upsertStreamingSlide,
   updateTitle,
   setOutlines,
   // slides operations

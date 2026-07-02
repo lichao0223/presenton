@@ -1,7 +1,7 @@
-import React, { useState, useRef } from "react";
-import { UploadIcon, ChevronRight, Plus, FileText, X, Coins, Edit3, Info } from "lucide-react";
+import React from "react";
+import { UploadIcon, ChevronRight, Plus, FileText, X } from "lucide-react";
 import { ProcessedSlide } from "../types";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface FileUploadSectionProps {
   selectedFile: File | null;
@@ -14,10 +14,6 @@ interface FileUploadSectionProps {
   completedSlides: number;
 }
 
-// Credit costs constants
-const COST_PER_SLIDE = 3;
-const COST_EDIT = 1;
-
 export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
   selectedFile,
   handleFileSelect,
@@ -28,6 +24,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
   slides,
   completedSlides,
 }) => {
+  const { t } = useI18n();
   const isProcessing = isProcessingPptx || slides.some((s) => s.processing);
 
   const handleCheckFonts = () => {
@@ -55,7 +52,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             }}
           >
             <UploadIcon className={`w-4 h-4 text-black`} />
-            <p className='text-xs font-medium text-black'>Upload PPTX File</p>
+            <p className='text-xs font-medium text-black'>{t("Upload PPTX File")}</p>
           </div>
         </div>
         <div className=" w-full bg-[#FAFAFF] rounded-[28px] p-2.5 "
@@ -82,7 +79,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                       </div>
                     </div>
                     <p className='pt-3 text-xs font-normal text-[#808080] tracking-[-0.12px] text-center'>
-                      <span className='text-[#808080] underline underline-offset-4'>Click to Upload</span> or drag &amp; drop.
+                      <span className='text-[#808080] underline underline-offset-4'>{t("Click to Upload")}</span> {t("or drag & drop.")}
                     </p>
                   </div>
                 </> : <div className="flex gap-2 items-center justify-center h-full w-fit mx-auto">
@@ -118,17 +115,17 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
               <div className="flex items-center justify-between gap-2.5">
                 <div className="min-w-[140px] w-full">
                   {isProcessing ? (
-                    <div className="flex items-center justify-end gap-3" aria-live="polite" aria-label="Processing">
+                    <div className="flex items-center justify-end gap-3" aria-live="polite" aria-label={t("Processing")}>
                       <div
                         className="h-[14px] w-[74px] rounded-full bg-[#EFEDFF] overflow-hidden ring-1 ring-[#E4E0FF]"
                         aria-hidden="true"
                       >
                         <div className="h-full w-full rounded-full processing-stripes" />
                       </div>
-                      <p className="text-sm font-medium text-[#9A9AA6] tracking-[-0.1px]">Processing</p>
+                      <p className="text-sm font-medium text-[#9A9AA6] tracking-[-0.1px]">{t("Processing")}</p>
                       {slides.length > 0 ? (
                         <p className="text-sm font-medium text-[#9A9AA6] tracking-[-0.1px]">
-                          {completedSlides}/{slides.length} Slides
+                          {completedSlides}/{slides.length} {t("Slides")}
                         </p>
                       ) : null}
                       <style jsx>{`
@@ -168,10 +165,10 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                         disabled={isProcessing}
                       >
                         {isProcessingPptx
-                          ? "Checking Fonts..."
+                          ? t("Checking Fonts...")
                           : !selectedFile
-                            ? "Select a PPTX file"
-                            : "Check Fonts"}
+                            ? t("Select a PPTX file")
+                            : t("Check Fonts")}
                         <ChevronRight className="w-3.5 h-3.5 text-black" />
                       </button>
                     </div>
@@ -189,19 +186,19 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
               <circle cx="8.5" cy="8.17041" r="4.5" fill="#EBE9FE" />
             </svg>
-            <p className="md:text-sm text-[10px] font-normal text-[#3A3A3A] ">PPTX. Only</p>
+            <p className="md:text-sm text-[10px] font-normal text-[#3A3A3A] ">{t("PPTX. Only")}</p>
           </li>
           <li className="flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
               <circle cx="8.5" cy="8.17041" r="4.5" fill="#EBE9FE" />
             </svg>
-            <p className="md:text-sm text-[10px] font-normal text-[#3A3A3A] ">Max 100MB</p>
+            <p className="md:text-sm text-[10px] font-normal text-[#3A3A3A] ">{t("Max 100MB")}</p>
           </li>
           <li className="flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
               <circle cx="8.5" cy="8.17041" r="4.5" fill="#EBE9FE" />
             </svg>
-            <p className="md:text-sm text-[10px] font-normal text-[#3A3A3A] ">5min Generation</p>
+            <p className="md:text-sm text-[10px] font-normal text-[#3A3A3A] ">{t("5min Generation")}</p>
           </li>
         </ul>
 
@@ -211,7 +208,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             <path d="M10 6V10M10 14H10.0088" stroke="#5B49A1" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
           <p className="text-sm md:text-base font-medium text-[#20165C] tracking-[-0.13px]">
-            <span className="font-bold text-[#5B49A1]">Note:</span> Each slide is sent to your configured text model as a <span className="font-semibold">screenshot plus HTML reference</span>. Only <span className="font-semibold">vision-capable</span> models (image input) can use the layout faithfully. Text-only models may error or produce weak layouts; pick a vision model in Settings for your provider.
+            <span className="font-bold text-[#5B49A1]">{t("Note:")}</span> {t("Each slide is sent to your configured text model as a")} <span className="font-semibold">{t("screenshot plus HTML reference")}</span>{t(". Only")} <span className="font-semibold">{t("vision-capable")}</span> {t("models (image input) can use the layout faithfully. Text-only models may error or produce weak layouts; pick a vision model in Settings for your provider.")}
           </p>
         </div>
 

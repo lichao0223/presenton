@@ -3,6 +3,7 @@ import React, { memo, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { TemplateWithData } from "@/app/presentation-templates/utils";
 import { CompiledLayout } from "@/app/hooks/compileLayout";
+import { useI18n } from "@/i18n/I18nProvider";
 
 
 
@@ -21,9 +22,10 @@ export function TemplatePreviewStage({ children }: { children: React.ReactNode }
 }
 
 export const LayoutsBadge = memo(function LayoutsBadge({ count }: { count: number }) {
+    const { t } = useI18n();
     return (
         <span className="text-xs font-syne absolute top-3.5 left-4 z-40 inline-flex items-center rounded-full bg-[#333333] px-3 py-1 font-semibold text-white">
-            Layouts-{count}
+            {t("{count} Layouts").replace("{count}", String(count))}
         </span>
     );
 });

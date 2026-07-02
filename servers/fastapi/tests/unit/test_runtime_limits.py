@@ -153,24 +153,51 @@ def test_render_htmls_to_images_falls_back_for_older_runtime(tmp_path):
     for output_path in output_paths:
         output_path.write_bytes(b"png")
     service = ExportTaskService(timeout_seconds=10)
-    rendered_htmls = []
+    fallback_calls = []
 
     async def fake_run_task(_task_payload, _response_error_detail):
         raise HTTPException(status_code=500, detail="Export task failed: Invalid task type")
 
-    async def fake_render_html_to_image(html, width, height):
-        rendered_htmls.append((html, width, height))
-        return SimpleNamespace(path=str(output_paths[len(rendered_htmls) - 1]))
+    async def fake_local_browser(htmls, width, height):
+        fallback_calls.append((htmls, width, height))
+        return SimpleNamespace(paths=[str(path) for path in output_paths])
 
     service._run_task = fake_run_task
-    service.render_html_to_image = fake_render_html_to_image
+    service._render_htmls_to_images_with_local_browser = fake_local_browser
 
     result = asyncio.run(
         service.render_htmls_to_images(["<html>1</html>", "<html>2</html>"], 320, 180)
     )
 
     assert result.paths == [str(path) for path in output_paths]
-    assert rendered_htmls == [
-        ("<html>1</html>", 320, 180),
-        ("<html>2</html>", 320, 180),
+    assert fallback_calls == [(["<html>1</html>", "<html>2</html>"], 320, 180)]
+
+
+def test_render_htmls_to_images_remembers_unsupported_batch_runtime(tmp_path):
+    output_paths = [tmp_path / "preview-1.png", tmp_path / "preview-2.png"]
+    for output_path in output_paths:
+        output_path.write_bytes(b"png")
+    service = ExportTaskService(timeout_seconds=10)
+    batch_attempts = 0
+    fallback_calls = []
+
+    async def fake_run_task(_task_payload, _response_error_detail):
+        nonlocal batch_attempts
+        batch_attempts += 1
+        raise HTTPException(status_code=500, detail="Export task failed: Invalid task type")
+
+    async def fake_local_browser(htmls, width, height):
+        fallback_calls.append((htmls, width, height))
+        return SimpleNamespace(paths=[str(output_paths[len(fallback_calls) % 2])])
+
+    service._run_task = fake_run_task
+    service._render_htmls_to_images_with_local_browser = fake_local_browser
+
+    asyncio.run(service.render_htmls_to_images(["<html>1</html>"], 320, 180))
+    asyncio.run(service.render_htmls_to_images(["<html>2</html>"], 320, 180))
+
+    assert batch_attempts == 1
+    assert fallback_calls == [
+        (["<html>1</html>"], 320, 180),
+        (["<html>2</html>"], 320, 180),
     ]

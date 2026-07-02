@@ -13,9 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Save, Info } from "lucide-react";
-import { useRouter } from "next/navigation";
-import ToolTip from "@/components/ToolTip";
+import { Loader2, Save } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface SaveLayoutModalProps {
   isOpen: boolean;
@@ -32,6 +31,7 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
   isSaving,
   template_info_id,
 }) => {
+  const { t } = useI18n();
 
   const [layoutName, setLayoutName] = useState("");
   const [description, setDescription] = useState("");
@@ -62,24 +62,24 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
           <DialogTitle className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2">
               <Save className="w-5 h-5 text-primary" />
-              Save Template
+              {t("Save Template")}
             </span>
 
           </DialogTitle>
           <DialogDescription>
-            Give your template a clear name and an optional description to find it later.
+            {t("Give your template a clear name and an optional description to find it later.")}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-5 py-4">
           <div className="grid gap-2">
             <Label htmlFor="layout-name" className="text-sm font-medium">
-              Template Name <span className="text-red-500">*</span>
+              {t("Template Name")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="layout-name"
               value={layoutName}
               onChange={(e) => setLayoutName(e.target.value)}
-              placeholder="e.g., Modern Tech Pitch"
+              placeholder={t("e.g., Modern Tech Pitch")}
               disabled={isSaving}
               className="w-full"
               aria-required
@@ -88,13 +88,13 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="description" className="text-sm font-medium">
-              Description <span className="text-gray-400">(optional)</span>
+              {t("Description")} <span className="text-gray-400">{t("(optional)")}</span>
             </Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a short summary of what this template is best for..."
+              placeholder={t("Add a short summary of what this template is best for...")}
               disabled={isSaving}
               className="w-full resize-none"
               rows={3}
@@ -104,7 +104,7 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
           {isSaving && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-clock-icon lucide-clock"><path d="M12 6v6l4 2"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="10s" repeatCount="indefinite" /></path><circle cx="12" cy="12" r="10" /></svg>
-              <span>Saving your template. This may take a moment…</span>
+              <span>{t("Saving your template. This may take a moment…")}</span>
             </div>
           )}
         </div>
@@ -114,7 +114,7 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
             onClick={handleClose}
             disabled={isSaving}
           >
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button
             onClick={handleSave}
@@ -125,12 +125,12 @@ export const SaveLayoutModal: React.FC<SaveLayoutModalProps> = ({
             {isSaving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Saving...
+                {t("Saving...")}
               </>
             ) : (
               <>
                 <Save className="w-4 h-4 mr-2" />
-                Save Template
+                {t("Save Template")}
               </>
             )}
           </Button>

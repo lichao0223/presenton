@@ -12,6 +12,7 @@ import {
   Info,
 } from "lucide-react";
 import { FontManagerProps, FontItem } from "../types";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const fontUploadKey = (font: FontItem) => font.name;
 
@@ -23,6 +24,7 @@ const FontManager: React.FC<FontManagerProps> = ({
   onContinue,
   isUploading = false,
 }) => {
+  const { t } = useI18n();
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
   // Get fonts that still need to be uploaded (unavailable fonts not yet uploaded)
@@ -71,11 +73,11 @@ const FontManager: React.FC<FontManagerProps> = ({
               <Type className="w-6 h-6 text-[#7A5AF8]" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-[#111827]">Font Management</h2>
+              <h2 className="text-xl font-semibold text-[#111827]">{t("Font Management")}</h2>
               <p className="text-sm text-[#6B7280] mt-0.5">
-                {allFontsUploaded
+                {t(allFontsUploaded
                   ? "All fonts are ready! You can proceed to preview."
-                  : "Upload missing fonts to ensure your presentation displays correctly."}
+                  : "Upload missing fonts to ensure your presentation displays correctly.")}
               </p>
             </div>
           </div>
@@ -88,7 +90,7 @@ const FontManager: React.FC<FontManagerProps> = ({
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle2 className="w-5 h-5 text-[#16A34A]" />
                 <h4 className="text-sm font-semibold text-[#166534]">
-                  Available Fonts ({fontsData.available_fonts.length})
+                  {t("Available Fonts")} ({fontsData.available_fonts.length})
                 </h4>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -110,7 +112,7 @@ const FontManager: React.FC<FontManagerProps> = ({
               <div className="flex items-center gap-2 mb-4">
                 <AlertTriangle className="w-5 h-5 text-[#D97706]" />
                 <h4 className="text-sm font-semibold text-[#92400E]">
-                  Missing Fonts ({fontsNeedingUpload.length})
+                  {t("Missing Fonts")} ({fontsNeedingUpload.length})
                 </h4>
               </div>
 
@@ -130,12 +132,12 @@ const FontManager: React.FC<FontManagerProps> = ({
                         </span>
                         {font.family_name && font.family_name !== font.name && (
                           <span className="text-xs text-[#6B7280] block">
-                            Family: {font.family_name}
+                            {t("Family")}: {font.family_name}
                             {font.variant ? ` · ${font.variant.replace(/_/g, " ")}` : ""}
                           </span>
                         )}
                         <span className="text-xs text-[#9CA3AF]">
-                          Upload must match this name exactly (.ttf, .otf, .woff, .woff2, .eot)
+                          {t("Upload must match this name exactly")} (.ttf, .otf, .woff, .woff2, .eot)
                         </span>
                       </div>
                     </div>
@@ -157,7 +159,7 @@ const FontManager: React.FC<FontManagerProps> = ({
                         className="rounded-full px-4 h-9 text-sm font-medium transition-all text-[#D97706] border-[#D97706] hover:bg-[#FFFBEB] hover:border-[#D97706]"
                       >
                         <Upload className="w-4 h-4 mr-1" />
-                        Upload
+                        {t("Upload")}
                       </Button>
                     </div>
                   </div>
@@ -172,7 +174,7 @@ const FontManager: React.FC<FontManagerProps> = ({
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle2 className="w-5 h-5 text-[#16A34A]" />
                 <h4 className="text-sm font-semibold text-[#166534]">
-                  Uploaded Fonts ({uploadedFonts.length})
+                  {t("Uploaded Fonts")} ({uploadedFonts.length})
                 </h4>
               </div>
               <div className="space-y-2">
@@ -211,12 +213,12 @@ const FontManager: React.FC<FontManagerProps> = ({
             {!allFontsUploaded && (
               <div className="flex items-start gap-2 text-sm text-[#6B7280]">
                 <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <p>You can continue without all fonts, but some text may not display correctly.</p>
+                <p>{t("You can continue without all fonts, but some text may not display correctly.")}</p>
               </div>
             )}
             {allFontsUploaded && (
               <p className="text-sm text-[#16A34A] font-medium">
-                ✓ All fonts are ready
+                ✓ {t("All fonts are ready")}
               </p>
             )}
             <Button
@@ -236,11 +238,11 @@ const FontManager: React.FC<FontManagerProps> = ({
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processing...
+                  {t("Processing...")}
                 </>
               ) : (
                 <>
-                  {allFontsUploaded ? 'Continue to Preview' : 'Continue'}
+                  {t(allFontsUploaded ? 'Continue to Preview' : 'Continue')}
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </>
               )}

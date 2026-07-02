@@ -1,6 +1,8 @@
+import logging
 import os
 import random
 import re
+import time
 import uuid
 from datetime import datetime
 from typing import Any, Awaitable, Callable, List, Optional
@@ -50,6 +52,7 @@ from utils.asset_directory_utils import (
 
 
 LAYOUT_CODE_REPAIR_ATTEMPTS = 3
+logger = logging.getLogger("uvicorn.error")
 
 
 class TemplateDetail(BaseModel):
@@ -162,14 +165,48 @@ class CloneSlideLayoutRequest(BaseModel):
     layout_name: Optional[str] = None
 
 
-def _strip_code_fences(value: str) -> str:
-    return (
-        value.replace("```tsx", "")
-        .replace("```typescript", "")
-        .replace("```ts", "")
-        .replace("```", "")
-        .strip()
+def _extract_layout_code_candidate(value: str) -> str:
+    text = value.replace("\r\n", "\n").strip()
+
+    fenced_blocks = re.finditer(
+        r"(?ms)```[ \t]*(?P<lang>[A-Za-z0-9_+-]*)[^\n]*\n(?P<body>.*?)(?:\n```|```)",
+        text,
     )
+    preferred_languages = {"tsx", "typescript", "ts", "jsx", "javascript", "js", ""}
+    best_fenced_body: Optional[str] = None
+    for match in fenced_blocks:
+        language = (match.group("lang") or "").lower()
+        body = match.group("body").strip()
+        has_layout_shape = (
+            "const Schema" in body
+            and "layoutId" in body
+            and "dynamicSlideLayout" in body
+        )
+        if has_layout_shape and language in preferred_languages:
+            return body
+        if has_layout_shape and best_fenced_body is None:
+            best_fenced_body = body
+
+    if best_fenced_body is not None:
+        return best_fenced_body
+
+    code_start_patterns = [
+        r"(?m)^\s*import\b",
+        r"(?m)^\s*(?:const|let|var)\s+Schema\b",
+        r"(?m)^\s*(?:const|let|var)\s+layoutId\b",
+    ]
+    starts = [
+        match.start()
+        for pattern in code_start_patterns
+        for match in [re.search(pattern, text)]
+        if match is not None
+    ]
+    if starts:
+        text = text[min(starts) :]
+
+    return text.replace("```tsx", "").replace("```typescript", "").replace(
+        "```ts", ""
+    ).replace("```", "").strip()
 
 
 _ASSET_FIELD_REPLACEMENTS = {
@@ -215,7 +252,7 @@ def _normalize_asset_fields(code: str) -> str:
 
 
 def _normalize_layout_code_for_create(code: str) -> str:
-    normalized = _normalize_asset_fields(_strip_code_fences(code))
+    normalized = _normalize_asset_fields(_extract_layout_code_candidate(code))
 
     first_import_match = re.search(r"(?m)^\s*import\b", normalized)
     if first_import_match:
@@ -275,6 +312,30 @@ def _validation_error_message(exc: LayoutCodeValidationError) -> str:
     return f"{exc.error}{location}"
 
 
+def _log_layout_code_sample(
+    *,
+    log_context: Optional[str],
+    label: str,
+    code: str,
+) -> None:
+    if not log_context:
+        return
+
+    normalized_newlines = code.replace("\r\n", "\n")
+    first_line = normalized_newlines.split("\n", 1)[0]
+    head = normalized_newlines[:800]
+    tail = normalized_newlines[-400:] if len(normalized_newlines) > 800 else ""
+    logger.warning(
+        "%s %s layout code sample chars=%s first_line=%r head=%r tail=%r",
+        log_context,
+        label,
+        len(code),
+        first_line[:200],
+        head,
+        tail,
+    )
+
+
 def _validation_repair_user_text(
     *,
     original_user_text: str,
@@ -284,8 +345,13 @@ def _validation_repair_user_text(
     return (
         f"{original_user_text}\n\n"
         "#VALIDATION ERROR\n"
-        "The TSX code you returned failed validation. Return a complete corrected "
-        "TSX layout code only, with no markdown fences and no explanation.\n"
+        "The TSX code you returned failed validation. Return a complete corrected TSX layout code only.\n"
+        "Hard requirements:\n"
+        "- Output raw TSX code only.\n"
+        "- The first non-whitespace character must begin `import` or `const`.\n"
+        "- Do not output markdown fences, prose, explanations, headings, JSON, comments, or apologies.\n"
+        "- Include `const Schema`, `const layoutId`, `const layoutName`, `const layoutDescription`, and `const dynamicSlideLayout`.\n"
+        "- End with exactly one export statement: `export {Schema, layoutId, layoutName, layoutDescription, dynamicSlideLayout}`.\n"
         f"Error: {_validation_error_message(validation_error)}\n\n"
         "#INVALID TSX CODE RETURNED\n"
         f"{invalid_code}"
@@ -310,15 +376,34 @@ async def _validate_provider_layout_code_or_retry(
     retry_call: Callable[[str], Awaitable[str]],
     original_user_text: str,
     normalize_code: Callable[[str], str],
+    log_context: Optional[str] = None,
 ) -> ValidatedLayoutCode:
     normalized_code = normalize_code(code)
     try:
         return await validate_layout_code(normalized_code)
     except LayoutCodeValidationError as validation_error:
+        if log_context:
+            logger.warning(
+                "%s layout validation failed, starting repair attempts: %s",
+                log_context,
+                _validation_error_message(validation_error),
+            )
+            _log_layout_code_sample(
+                log_context=log_context,
+                label="initial invalid",
+                code=normalized_code,
+            )
         invalid_code = normalized_code
         last_error = validation_error
 
-        for _attempt in range(LAYOUT_CODE_REPAIR_ATTEMPTS):
+        for _attempt in range(1, LAYOUT_CODE_REPAIR_ATTEMPTS + 1):
+            if log_context:
+                logger.info(
+                    "%s layout validation repair attempt %s/%s started",
+                    log_context,
+                    _attempt,
+                    LAYOUT_CODE_REPAIR_ATTEMPTS,
+                )
             repair_user_text = _validation_repair_user_text(
                 original_user_text=original_user_text,
                 invalid_code=invalid_code,
@@ -326,8 +411,29 @@ async def _validate_provider_layout_code_or_retry(
             )
             repaired_code = normalize_code(await retry_call(repair_user_text))
             try:
-                return await validate_layout_code(repaired_code)
+                validated = await validate_layout_code(repaired_code)
+                if log_context:
+                    logger.info(
+                        "%s layout validation repair attempt %s/%s succeeded",
+                        log_context,
+                        _attempt,
+                        LAYOUT_CODE_REPAIR_ATTEMPTS,
+                    )
+                return validated
             except LayoutCodeValidationError as retry_error:
+                if log_context:
+                    logger.warning(
+                        "%s layout validation repair attempt %s/%s failed: %s",
+                        log_context,
+                        _attempt,
+                        LAYOUT_CODE_REPAIR_ATTEMPTS,
+                        _validation_error_message(retry_error),
+                    )
+                    _log_layout_code_sample(
+                        log_context=log_context,
+                        label=f"repair attempt {_attempt} invalid",
+                        code=repaired_code,
+                    )
                 invalid_code = repaired_code
                 last_error = retry_error
             except LayoutCodeValidationServiceError as exc:
@@ -571,18 +677,41 @@ async def init_create_template(
 async def _create_slide_layout_impl(
     sql_session: AsyncSession,
     request: CreateSlideLayoutRequest,
+    *,
+    job_id: Optional[str] = None,
 ) -> CreateSlideLayoutResponse:
+    started_at = time.perf_counter()
+    log_context = (
+        f"slide_layout_job={job_id or 'sync'} "
+        f"template_info={request.id} slide_index={request.index}"
+    )
+    logger.info("%s started", log_context)
+
     template_info = await sql_session.get(TemplateCreateInfoModel, request.id)
     if not template_info:
+        logger.warning("%s failed: template info not found", log_context)
         raise HTTPException(status_code=400, detail="Template not found")
 
     total_slides = len(template_info.slide_htmls)
+    log_context = (
+        f"slide_layout_job={job_id or 'sync'} "
+        f"template_info={request.id} slide={request.index + 1}/{total_slides}"
+    )
+    logger.info("%s loaded template info", log_context)
     if request.index < 0 or request.index >= total_slides:
+        logger.warning("%s failed: invalid slide index", log_context)
         raise HTTPException(status_code=400, detail="Invalid slide index")
 
     slide_html = template_info.slide_htmls[request.index]
     slide_image_url = template_info.slide_image_urls[request.index]
+    logger.info("%s reading slide screenshot: %s", log_context, slide_image_url)
     image_bytes, media_type = await _read_image_bytes_and_media_type(slide_image_url)
+    logger.info(
+        "%s slide screenshot loaded media_type=%s bytes=%s",
+        log_context,
+        media_type,
+        len(image_bytes),
+    )
 
     fonts_text = ""
     if template_info.fonts:
@@ -590,20 +719,48 @@ async def _create_slide_layout_impl(
         fonts_text = "#PROVIDED FONTS\n- " + "\n- ".join(font_names)
 
     user_text = f"{fonts_text}\n\n#SLIDE HTML REFERENCE\n{slide_html}"
+    generation_attempt = 0
+
     async def retry_generation(repair_user_text: str) -> str:
-        return await generate_slide_layout_code(
+        nonlocal generation_attempt
+        generation_attempt += 1
+        attempt_started_at = time.perf_counter()
+        logger.info(
+            "%s calling template model attempt=%s prompt_chars=%s image_bytes=%s",
+            log_context,
+            generation_attempt,
+            len(repair_user_text),
+            len(image_bytes),
+        )
+        result = await generate_slide_layout_code(
             system_prompt=SLIDE_LAYOUT_CREATION_SYSTEM_PROMPT,
             user_text=repair_user_text,
             image_bytes=image_bytes,
             media_type=media_type,
         )
+        logger.info(
+            "%s template model returned attempt=%s response_chars=%s elapsed=%.2fs",
+            log_context,
+            generation_attempt,
+            len(result),
+            time.perf_counter() - attempt_started_at,
+        )
+        return result
 
     react_component = await retry_generation(user_text)
+    logger.info("%s validating generated layout code", log_context)
     validated = await _validate_provider_layout_code_or_retry(
         code=react_component,
         retry_call=retry_generation,
         original_user_text=user_text,
         normalize_code=_normalize_layout_code_for_create,
+        log_context=log_context,
+    )
+    logger.info(
+        "%s completed layout generation layout_id=%s elapsed=%.2fs",
+        log_context,
+        validated.layout_id,
+        time.perf_counter() - started_at,
     )
 
     return CreateSlideLayoutResponse(react_component=validated.layout_code)
@@ -621,12 +778,18 @@ async def create_slide_layout_job_start(
 ):
     req = request.model_copy()
 
-    async def work() -> str:
+    async def work(run_job_id: str) -> str:
         async with async_session_maker() as session:
-            result = await _create_slide_layout_impl(session, req)
+            result = await _create_slide_layout_impl(session, req, job_id=run_job_id)
             return result.react_component
 
     job_id = await start_slide_layout_job(work)
+    logger.info(
+        "slide_layout_job=%s queued template_info=%s slide_index=%s",
+        job_id,
+        req.id,
+        req.index,
+    )
     return SlideLayoutJobStartResponse(job_id=job_id)
 
 

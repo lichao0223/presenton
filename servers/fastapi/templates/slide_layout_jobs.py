@@ -9,6 +9,7 @@ Note: state lives in this process only (single uvicorn worker in the shipped sta
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -39,6 +40,7 @@ class _JobRecord:
 _jobs: dict[str, _JobRecord] = {}
 _lock = asyncio.Lock()
 _MAX_JOBS = 256
+logger = logging.getLogger("uvicorn.error")
 
 
 def _http_exception_message(exc: HTTPException) -> str:
@@ -63,7 +65,7 @@ async def _prune_if_needed() -> None:
 
 
 async def start_slide_layout_job(
-    work: Callable[[], Awaitable[str]],
+    work: Callable[[str], Awaitable[str]],
 ) -> str:
     await _prune_if_needed()
     job_id = str(uuid.uuid4())
@@ -72,13 +74,19 @@ async def start_slide_layout_job(
 
     async def _runner() -> None:
         try:
-            react = await work()
+            react = await work(job_id)
             async with _lock:
                 rec = _jobs.get(job_id)
                 if rec:
                     rec.status = "complete"
                     rec.react_component = react
         except HTTPException as exc:
+            logger.warning(
+                "Slide layout job %s failed with HTTP %s: %s",
+                job_id,
+                exc.status_code,
+                _http_exception_message(exc),
+            )
             async with _lock:
                 rec = _jobs.get(job_id)
                 if rec:
@@ -87,6 +95,7 @@ async def start_slide_layout_job(
         except asyncio.CancelledError:
             raise
         except Exception as exc:
+            logger.exception("Slide layout job %s failed unexpectedly", job_id)
             async with _lock:
                 rec = _jobs.get(job_id)
                 if rec:

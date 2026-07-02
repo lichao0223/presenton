@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Command,
   CommandEmpty,
@@ -51,6 +52,38 @@ interface ModelOption {
 }
 
 const MANUAL_MODEL_PROVIDERS = new Set(["vertex", "azure", "bedrock"]);
+const MODEL_TEST_SUPPORTED_PROVIDERS = new Set([
+  "openai",
+  "deepseek",
+  "google",
+  "openrouter",
+  "fireworks",
+  "together",
+  "cerebras",
+  "litellm",
+  "lmstudio",
+  "anthropic",
+  "ollama",
+  "custom",
+]);
+const MODEL_TEST_API_KEY_REQUIRED_PROVIDERS = new Set([
+  "openai",
+  "deepseek",
+  "google",
+  "openrouter",
+  "fireworks",
+  "together",
+  "cerebras",
+  "anthropic",
+]);
+
+interface ModelTestResult {
+  success: boolean;
+  provider: string;
+  model: string;
+  content: string;
+  latency_ms: number;
+}
 
 const TextProvider = ({ onInputChange, llmConfig }: OpenAIConfigProps) => {
   const [openProviderSelect, setOpenProviderSelect] = useState(false);
@@ -58,6 +91,13 @@ const TextProvider = ({ onInputChange, llmConfig }: OpenAIConfigProps) => {
   const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsChecked, setModelsChecked] = useState(false);
+  const [modelTestPrompt, setModelTestPrompt] = useState(
+    "请用一句中文回复：模型连接测试成功。"
+  );
+  const [modelTestLoading, setModelTestLoading] = useState(false);
+  const [modelTestResult, setModelTestResult] =
+    useState<ModelTestResult | null>(null);
+  const [modelTestError, setModelTestError] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [deepseekAdvancedOpen, setDeepseekAdvancedOpen] = useState(() =>
     !!(llmConfig.DEEPSEEK_BASE_URL || "").trim()
@@ -182,10 +222,69 @@ const TextProvider = ({ onInputChange, llmConfig }: OpenAIConfigProps) => {
       : selectedProvider === "lmstudio"
       ? "LM Studio API key (optional)"
       : `${selectedProvider} API Key`;
+  const currentOpenAICompatibleUrl =
+    selectedProvider === "custom"
+      ? currentCustomUrl
+      : selectedProvider === "deepseek"
+      ? currentDeepseekBaseUrl || selectedProviderMeta?.url || ""
+      : selectedProvider === "litellm"
+      ? currentLitellmUrl
+      : selectedProvider === "lmstudio"
+      ? currentLmStudioUrl || selectedProviderMeta?.url || ""
+      : selectedProvider === "fireworks"
+      ? currentFireworksUrl || selectedProviderMeta?.url || ""
+      : selectedProvider === "together"
+      ? currentTogetherUrl || selectedProviderMeta?.url || ""
+      : selectedProviderMeta?.url || "";
+  const isModelTestSupported =
+    MODEL_TEST_SUPPORTED_PROVIDERS.has(selectedProvider);
+  const modelTestDisabledReason = useMemo(() => {
+    if (!isModelTestSupported) {
+      return "当前提供商暂不支持页面内测试";
+    }
+    if (!currentModel.trim()) {
+      return "请先选择或填写模型";
+    }
+    if (!modelTestPrompt.trim()) {
+      return "请输入测试提示词";
+    }
+    if (
+      MODEL_TEST_API_KEY_REQUIRED_PROVIDERS.has(selectedProvider) &&
+      !currentApiKey.trim()
+    ) {
+      return "请先填写 API Key";
+    }
+    if (selectedProvider === "custom" && !currentCustomUrl.trim()) {
+      return "请先填写 OpenAI-compatible URL";
+    }
+    if (selectedProvider === "litellm" && !currentLitellmUrl.trim()) {
+      return "请先填写 LiteLLM base URL";
+    }
+    return "";
+  }, [
+    currentApiKey,
+    currentCustomUrl,
+    currentLitellmUrl,
+    currentModel,
+    isModelTestSupported,
+    modelTestPrompt,
+    selectedProvider,
+  ]);
 
   useEffect(() => {
     if (currentDeepseekBaseUrl) setDeepseekAdvancedOpen(true);
   }, [currentDeepseekBaseUrl]);
+
+  useEffect(() => {
+    setModelTestResult(null);
+    setModelTestError("");
+  }, [
+    selectedProvider,
+    currentModel,
+    currentApiKey,
+    currentOpenAICompatibleUrl,
+    currentOllamaUrl,
+  ]);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -397,6 +496,53 @@ const TextProvider = ({ onInputChange, llmConfig }: OpenAIConfigProps) => {
       }
     } finally {
       setModelsLoading(false);
+    }
+  };
+
+  const testCurrentModel = async () => {
+    if (modelTestDisabledReason || modelTestLoading) return;
+
+    setModelTestLoading(true);
+    setModelTestResult(null);
+    setModelTestError("");
+    try {
+      const response = await fetch(getApiUrl("/api/v1/ppt/model/test"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: selectedProvider,
+          model: currentModel,
+          prompt: modelTestPrompt,
+          api_key: currentApiKey,
+          base_url: currentOpenAICompatibleUrl,
+          ollama_url: currentOllamaUrl || getDefaultOllamaUrl(),
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await getApiErrorMessage(
+          response,
+          "模型测试失败，请检查 API Key、Base URL 和模型名。"
+        );
+        setModelTestError(message);
+        notify.error("模型测试失败", message);
+        return;
+      }
+
+      const data = (await response.json()) as ModelTestResult;
+      setModelTestResult(data);
+      notify.success("模型测试成功", `耗时 ${data.latency_ms} ms`);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "模型测试请求失败，请检查后端服务是否正常。";
+      setModelTestError(message);
+      notify.error("模型测试失败", message);
+    } finally {
+      setModelTestLoading(false);
     }
   };
 
@@ -938,6 +1084,70 @@ const TextProvider = ({ onInputChange, llmConfig }: OpenAIConfigProps) => {
           </p>
         </div>
       )}
+
+      <div className="rounded-[12px] bg-white px-10 py-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-[290px] shrink-0">
+            <h3 className="text-xl font-normal text-[#191919]">模型测试</h3>
+            <p className="mt-2.5 text-sm text-gray-500">
+              用当前页面填写的配置发送一次真实文本请求
+            </p>
+          </div>
+          <div className="min-w-0 flex-1 space-y-3">
+            <Textarea
+              value={modelTestPrompt}
+              onChange={(event) => setModelTestPrompt(event.target.value)}
+              className="min-h-[104px] resize-y rounded-lg border-gray-300 bg-white text-sm shadow-none focus-visible:ring-blue-500/20"
+              placeholder="输入一段提示词，测试当前模型是否能返回内容"
+              disabled={!isModelTestSupported || modelTestLoading}
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                onClick={testCurrentModel}
+                disabled={!!modelTestDisabledReason || modelTestLoading}
+                className="h-10 rounded-[48px] bg-[#101323] px-5 text-sm font-semibold text-white hover:bg-[#23263A]"
+              >
+                {modelTestLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    测试中...
+                  </>
+                ) : (
+                  "测试模型"
+                )}
+              </Button>
+              {modelTestDisabledReason ? (
+                <span className="text-xs text-gray-500">
+                  {modelTestDisabledReason}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-500">
+                  当前模型：{currentModel}
+                </span>
+              )}
+            </div>
+            {modelTestResult ? (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-green-800">
+                  <span>测试成功</span>
+                  <span>{modelTestResult.provider}</span>
+                  <span>{modelTestResult.model}</span>
+                  <span>{modelTestResult.latency_ms} ms</span>
+                </div>
+                <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-sm leading-6 text-green-950">
+                  {modelTestResult.content}
+                </pre>
+              </div>
+            ) : null}
+            {modelTestError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-800">
+                {modelTestError}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
 
       {/* <div className="bg-white flex justify-between items-center p-10 rounded-[12px]">
                 <div className=' max-w-[290px]'>

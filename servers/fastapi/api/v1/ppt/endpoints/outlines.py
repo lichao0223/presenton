@@ -201,6 +201,18 @@ async def stream_outlines(
                 dirtyjson.loads(presentation_outlines_text)
             )
         except Exception as e:
+            LOGGER.error(
+                "Failed to parse outline LLM output: presentation_id=%s "
+                "raw_length=%s raw_output=%r",
+                presentation.id,
+                len(presentation_outlines_text),
+                presentation_outlines_text[:12000]
+                + (
+                    "... [truncated]"
+                    if len(presentation_outlines_text) > 12000
+                    else ""
+                ),
+            )
             traceback.print_exc()
             yield SSEErrorResponse(
                 detail=f"Failed to generate presentation outlines. Please try again. {str(e)}",

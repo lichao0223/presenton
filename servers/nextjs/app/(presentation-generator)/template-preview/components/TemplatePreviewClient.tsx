@@ -13,11 +13,13 @@ import { notify } from "@/components/ui/sonner";
 import { CustomTemplateLayout, useCustomTemplateDetails } from "@/app/hooks/useCustomTemplates";
 import { templates as templateGroups, getTemplatesByTemplateName } from "@/app/presentation-templates";
 import { setupImageUrlConverter } from "@/utils/image-url-converter";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const GroupLayoutPreview = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
 
   const templateParams = searchParams.get("slug") || "";
 
@@ -54,16 +56,16 @@ const GroupLayoutPreview = () => {
     if (!customTemplateId) return;
 
     const confirmed = window.confirm(
-      "Are you sure you want to delete this template? This action cannot be undone."
+      t("Are you sure you want to delete this template? This action cannot be undone.")
     );
     if (!confirmed) return;
 
     const success = await TemplateService.deleteCustomTemplate(customTemplateId);
     if (success.success) {
-      notify.success("Template deleted", "The template was deleted successfully.");
+      notify.success(t("Template deleted"), t("The template was deleted successfully."));
       router.push("/templates");
     } else {
-      notify.error("Could not delete template", "Something went wrong while deleting the template.");
+      notify.error(t("Could not delete template"), t("Something went wrong while deleting the template."));
     }
   };
 
@@ -73,7 +75,7 @@ const GroupLayoutPreview = () => {
         <Header />
         <div className="flex items-center justify-center py-24">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <span className="ml-3 text-gray-600">Compiling templates...</span>
+          <span className="ml-3 text-gray-600">{t("Compiling templates...")}</span>
         </div>
       </div>
     );
@@ -84,11 +86,11 @@ const GroupLayoutPreview = () => {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="flex flex-col items-center justify-center py-24">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error loading template</h2>
+          <h2 className="text-2xl font-bold text-red-600 mb-4">{t("Error loading template")}</h2>
           <p className="text-gray-600 mb-4">{customError}</p>
           <Button onClick={() => router.push("/templates")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Templates
+            {t("Back to Templates")}
           </Button>
         </div>
       </div>
@@ -104,11 +106,11 @@ const GroupLayoutPreview = () => {
         <Header />
         <div className="flex flex-col items-center justify-center py-24">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Template not found
+            {t("Template not found")}
           </h2>
           <Button onClick={() => router.push("/templates")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Templates
+            {t("Back to Templates")}
           </Button>
         </div>
       </div>
@@ -145,7 +147,7 @@ const GroupLayoutPreview = () => {
                   className="flex items-center gap-2 border-red-200 text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Delete Template
+                  {t("Delete Template")}
                 </Button>
               </div>
             )}
@@ -156,7 +158,7 @@ const GroupLayoutPreview = () => {
               <h1 className="text-[64px] font-bold text-gray-900">{templateName}</h1>
               {isCustom && (
                 <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-sm">
-                  Custom
+                  {t("Custom")}
                 </span>
               )}
             </div>

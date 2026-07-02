@@ -27,7 +27,9 @@ import SlideErrorBoundary from "@/app/(presentation-generator)/components/SlideE
 // import { CodeEditor } from "./CodeEditor";
 // import SlideSelectionEditor from "./SlideSelectionEditor";
 import SchemaElementHighlighter from "../SchemaElementHighlighter";
+import { useI18n } from "@/i18n/I18nProvider";
 
+const hasCjkText = (value?: string | null) => /[\u3400-\u9fff]/.test(value || "");
 
 const EachSlide: React.FC<EachSlideProps> = ({
   slide,
@@ -41,6 +43,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
   schemaPreviewData,
   onClearSchemaPreview,
 }) => {
+  const { t } = useI18n();
   const [localPreviewData, setLocalPreviewData] = useState<Record<string, any> | null>(null);
 
   // Use schema preview data from parent if available, otherwise use local
@@ -140,7 +143,8 @@ const EachSlide: React.FC<EachSlideProps> = ({
   const handleDeleteSlide = () => {
     // warmin
     const confirmed = window.confirm(
-      `Are you sure you want to delete slide ${index + 1}? This action cannot be undone.`
+      t("Are you sure you want to delete slide {slide}? This action cannot be undone.")
+        .replace("{slide}", String(index + 1))
     );
     if (!confirmed) return;
     setSlides(prev => prev.filter((_, i) => i !== index));
@@ -155,6 +159,9 @@ const EachSlide: React.FC<EachSlideProps> = ({
   const isSlideReady = slide.processed && !slide.processing;
   const isSlideProcessing = slide.processing;
   const hasError = !!slide.error;
+  const slideDescription = hasCjkText(compiledLayout?.layoutDescription)
+    ? compiledLayout?.layoutDescription
+    : t("Custom template slide layout");
 
   return (
     <div className="group max-w-[1440px] mx-auto relative bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-[#D1D5DB]">
@@ -168,11 +175,11 @@ const EachSlide: React.FC<EachSlideProps> = ({
             </div>
             <div>
               <h3 className="text-base font-semibold text-[#111827] tracking-tight">
-                {compiledLayout?.layoutId || `Slide ${index + 1}`}
+                {t(`Slide ${index + 1}`)}
               </h3>
-              {compiledLayout?.layoutDescription && (
+              {slideDescription && (
                 <p className="text-sm text-[#6B7280] mt-0.5 line-clamp-1 max-w-[300px]">
-                  {compiledLayout.layoutDescription}
+                  {slideDescription}
                 </p>
               )}
             </div>
@@ -204,7 +211,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
                     `}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>AI Edit</span>
+                    <span>{t("AI Edit")}</span>
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
@@ -220,8 +227,8 @@ const EachSlide: React.FC<EachSlideProps> = ({
                           <Sparkles className="w-3.5 h-3.5 text-white" />
                         </div>
                         <div>
-                          <span className="text-sm font-semibold text-gray-800">AI Edit</span>
-                          <p className="text-[10px] text-gray-400">Apply AI edits & tweaks</p>
+                          <span className="text-sm font-semibold text-gray-800">{t("AI Edit")}</span>
+                          <p className="text-[10px] text-gray-400">{t("Apply AI edits & tweaks")}</p>
                         </div>
                       </div>
                       <button
@@ -239,7 +246,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
                       onChange={(e) => setPrompt(e.target.value)}
                       rows={3}
                       autoFocus
-                      placeholder="What changes would you like? e.g., 'Make the title larger' or 'Change colors to blue theme'"
+                      placeholder={t("What changes would you like? e.g., 'Make the title larger' or 'Change colors to blue theme'")}
                       disabled={isUpdating}
                       className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 focus:bg-white transition-all"
                     />
@@ -260,12 +267,12 @@ const EachSlide: React.FC<EachSlideProps> = ({
                         {isUpdating ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            Applying...
+                            {t("Applying...")}
                           </>
                         ) : (
                           <>
                             <Check className="w-3.5 h-3.5" />
-                            Apply
+                            {t("Apply")}
                           </>
                         )}
                       </button>
@@ -275,7 +282,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
               </Popover>
 
               {/* Schema Button */}
-              <ToolTip content="Edit content schema">
+              <ToolTip content={t("Edit content schema")}>
                 <button
                   onClick={() => {
                     if (isSchemaEditorOpen) {
@@ -291,7 +298,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
                     }`}
                 >
                   <Edit className="w-3.5 h-3.5" />
-                  <span>Schema</span>
+                  <span>{t("Schema")}</span>
                 </button>
               </ToolTip>
 
@@ -332,7 +339,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
 
             {/* Undo/Redo Group */}
             <div className="flex items-center bg-gray-50/80 rounded-lg p-1 gap-0.5">
-              <ToolTip content={canUndo ? "Undo (Ctrl+Z)" : "Nothing to undo"}>
+              <ToolTip content={canUndo ? t("Undo (Ctrl+Z)") : t("Nothing to undo")}>
                 <button
                   onClick={undo}
                   disabled={!canUndo || !isSlideReady}
@@ -348,7 +355,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
                   <Undo className="w-4 h-4" />
                 </button>
               </ToolTip>
-              <ToolTip content={canRedo ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"}>
+              <ToolTip content={canRedo ? t("Redo (Ctrl+Shift+Z)") : t("Nothing to redo")}>
                 <button
                   onClick={redo}
                   disabled={!canRedo || !isSlideReady}
@@ -370,7 +377,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
             <div className="w-px h-6 bg-gray-200 mx-1" />
 
             {/* Re-Construct Button */}
-            <ToolTip content="Re-Design this slide">
+            <ToolTip content={t("Re-Design this slide")}>
               <button
                 onClick={handleRetrySlide}
                 disabled={!isSlideReady}
@@ -387,13 +394,13 @@ const EachSlide: React.FC<EachSlideProps> = ({
                 } : undefined}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Re-Construct
+                {t("Re-Construct")}
               </button>
 
             </ToolTip>
 
             {/* Delete Button */}
-            <ToolTip content="Delete slide">
+            <ToolTip content={t("Delete slide")}>
               <button
                 onClick={handleDeleteSlide}
                 disabled={!isSlideReady}
@@ -416,7 +423,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
           <div className="mt-4">
             <div className="flex items-center gap-2 mb-2">
               <Loader2 className="w-4 h-4 animate-spin text-[#7A5AF8]" />
-              <span className="text-sm font-medium text-[#7A5AF8]">Generating slide layout...</span>
+              <span className="text-sm font-medium text-[#7A5AF8]">{t("Generating slide layout...")}</span>
             </div>
             <Timer duration={120} />
           </div>
@@ -426,7 +433,7 @@ const EachSlide: React.FC<EachSlideProps> = ({
       {/* Slide Content */}
       <div className="p-4">
         <SlideErrorBoundary
-          label={`Slide ${index + 1}`}
+          label={t(`Slide ${index + 1}`)}
           resetKey={`${slide.processing}:${slide.processed}:${slide.react}`}
         >
           {/* Selection Edit Mode Banner */}
@@ -437,14 +444,14 @@ const EachSlide: React.FC<EachSlideProps> = ({
                   <MousePointer2 className="w-3.5 h-3.5 text-white" />
                 </div>
                 <span className="text-sm font-medium text-indigo-700">
-                  Selection Edit Mode — Click on any element to edit with AI
+                  {t("Selection Edit Mode — Click on any element to edit with AI")}
                 </span>
               </div>
               <button
                 onClick={() => setIsSelectionEditMode(false)}
                 className="h-8 px-3 text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:bg-indigo-100 rounded-md transition-colors"
               >
-                Exit
+                {t("Exit")}
               </button>
             </div>
           )}

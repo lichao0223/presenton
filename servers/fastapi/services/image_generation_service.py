@@ -1,8 +1,10 @@
 import asyncio
 import base64
 import json
+import logging
 import os
 import secrets
+import time
 import aiohttp
 from fastapi import HTTPException
 from google import genai
@@ -40,8 +42,24 @@ from utils.image_generation_error import normalize_image_generation_error
 import uuid
 
 
+logger = logging.getLogger(__name__)
+
 COMFYUI_MAX_SEED = 0xFFFFFFFFFFFFFFFF
 COMFYUI_SEED_SOURCE_VALUE_KEYS = {"value", "int", "integer", "number"}
+OPENAI_COMPAT_IMAGE_TIMEOUT_SECONDS = 300
+
+
+def _log_preview(value: str | None, limit: int = 160) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else f"{text[:limit]}..."
+
+
+def _result_preview(value: str | None) -> str:
+    if not value:
+        return ""
+    if value.startswith("http"):
+        return _log_preview(value, 200)
+    return os.path.basename(value) or _log_preview(value, 200)
 
 
 class ImageGenerationService:
@@ -86,17 +104,30 @@ class ImageGenerationService:
         - Output Directory is used for saving the generated image not the stock provider.
         """
         if self.is_image_generation_disabled:
-            print("Image generation is disabled. Using placeholder image.")
+            logger.info("Image generation skipped: disabled, using placeholder image")
             return absolute_fastapi_asset_url("/static/images/placeholder.jpg")
 
         if not self.image_gen_func:
-            print("No image generation function found. Using placeholder image.")
+            logger.warning(
+                "Image generation skipped: no provider selected, using placeholder image"
+            )
             return absolute_fastapi_asset_url("/static/images/placeholder.jpg")
 
         image_prompt = prompt.get_image_prompt(
             with_theme=not self.is_stock_provider_selected()
         )
-        print(f"Request - Generating Image for {image_prompt}")
+        provider_name = getattr(
+            self.image_gen_func,
+            "__name__",
+            self.image_gen_func.__class__.__name__,
+        )
+        prompt_preview = _log_preview(image_prompt)
+        started_at = time.perf_counter()
+        logger.info(
+            "Image generation started provider=%s prompt=%r",
+            provider_name,
+            prompt_preview,
+        )
 
         try:
             if self.is_stock_provider_selected():
@@ -107,8 +138,22 @@ class ImageGenerationService:
                 )
             if image_path:
                 if image_path.startswith("http"):
+                    logger.info(
+                        "Image generation completed provider=%s elapsed=%.2fs result=%s prompt=%r",
+                        provider_name,
+                        time.perf_counter() - started_at,
+                        _result_preview(image_path),
+                        prompt_preview,
+                    )
                     return image_path
                 elif os.path.exists(image_path):
+                    logger.info(
+                        "Image generation completed provider=%s elapsed=%.2fs result=%s prompt=%r",
+                        provider_name,
+                        time.perf_counter() - started_at,
+                        _result_preview(image_path),
+                        prompt_preview,
+                    )
                     return ImageAsset(
                         path=image_path,
                         is_uploaded=False,
@@ -120,11 +165,24 @@ class ImageGenerationService:
                 elif image_path.startswith("/app_data/") or image_path.startswith(
                     "/static/"
                 ):
+                    logger.info(
+                        "Image generation completed provider=%s elapsed=%.2fs result=%s prompt=%r",
+                        provider_name,
+                        time.perf_counter() - started_at,
+                        _result_preview(image_path),
+                        prompt_preview,
+                    )
                     return absolute_fastapi_asset_url(image_path)
             raise Exception(f"Image not found at {image_path}")
 
         except Exception as e:
-            print(f"Error generating image: {e}")
+            logger.exception(
+                "Image generation failed provider=%s elapsed=%.2fs prompt=%r error=%s",
+                provider_name,
+                time.perf_counter() - started_at,
+                prompt_preview,
+                e,
+            )
             normalized_error = normalize_image_generation_error(e)
             if normalized_error is e:
                 raise
@@ -848,6 +906,7 @@ class ImageGenerationService:
             prompt=prompt,
             n=1,
             size="1024x1024",
+            timeout=OPENAI_COMPAT_IMAGE_TIMEOUT_SECONDS,
         )
 
         item = response.data[0]
@@ -875,7 +934,9 @@ class ImageGenerationService:
                 dl_resp = await session.get(
                     image_url,
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=120),
+                    timeout=aiohttp.ClientTimeout(
+                        total=OPENAI_COMPAT_IMAGE_TIMEOUT_SECONDS
+                    ),
                 )
                 if dl_resp.status != 200:
                     raise Exception(

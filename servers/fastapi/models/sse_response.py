@@ -29,6 +29,25 @@ class SSETraceResponse(BaseModel):
         ).to_string()
 
 
+class SSEProgressResponse(BaseModel):
+    current: int
+    total: int
+    stage: str = "slides"
+
+    def to_string(self):
+        return SSEResponse(
+            event="response",
+            data=json.dumps(
+                {
+                    "type": "progress",
+                    "current": self.current,
+                    "total": self.total,
+                    "stage": self.stage,
+                }
+            ),
+        ).to_string()
+
+
 class SSEErrorResponse(BaseModel):
     detail: str
 

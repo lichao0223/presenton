@@ -101,6 +101,25 @@ function getFastApiUrlFromQuery(): string | null {
   }
 }
 
+function getLocalFastApiUrlFromBrowser(): string | null {
+  if (typeof window === "undefined") return null;
+
+  const { protocol, hostname, port } = window.location;
+  const isLocalHost =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname === "[::1]";
+
+  if (!isLocalHost) return null;
+
+  if (port === "3000") {
+    return "http://127.0.0.1:8010";
+  }
+
+  return `${protocol}//${hostname}${port ? `:${port}` : ""}`;
+}
+
 function isElectronRuntime(): boolean {
   return typeof window !== "undefined" && !!window.electron;
 }
@@ -143,6 +162,25 @@ export function getFastAPIUrl(): string {
   return getConfiguredFastApiUrl() || "http://127.0.0.1:5001";
 }
 
+export function getDirectFastAPIUrl(): string {
+  const queryFastApiUrl = getFastApiUrlFromQuery();
+  if (queryFastApiUrl) {
+    return queryFastApiUrl;
+  }
+
+  const configured = getConfiguredFastApiUrl();
+  if (configured) {
+    return configured.replace(/\/+$/, "");
+  }
+
+  const localFastApiUrl = getLocalFastApiUrlFromBrowser();
+  if (localFastApiUrl) {
+    return localFastApiUrl;
+  }
+
+  return getFastAPIUrl().replace(/\/+$/, "");
+}
+
 // Utility to construct API URL for Docker/web runtime.
 export function getApiUrl(path: string): string {
   if (isAbsoluteHttpUrl(path)) {
@@ -160,6 +198,14 @@ export function getApiUrl(path: string): string {
   }
 
   return resolveBackendPathForRuntime(normalizedPath);
+}
+
+export function getDirectApiUrl(path: string): string {
+  if (isAbsoluteHttpUrl(path)) {
+    return path;
+  }
+
+  return `${getDirectFastAPIUrl()}${withLeadingSlash(path)}`;
 }
 
 /**

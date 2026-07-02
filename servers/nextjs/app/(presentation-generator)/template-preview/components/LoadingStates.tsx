@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, AlertCircle, FileX } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface LoadingStatesProps {
   type: "loading" | "error" | "empty";
@@ -9,6 +10,8 @@ interface LoadingStatesProps {
 }
 
 const LoadingStates: React.FC<LoadingStatesProps> = ({ type, message }) => {
+  const { t } = useI18n();
+
   if (type === "loading") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
@@ -23,10 +26,10 @@ const LoadingStates: React.FC<LoadingStatesProps> = ({ type, message }) => {
 
             <div className="space-y-2">
               <h3 className="text-xl font-semibold text-gray-900">
-                Loading Layouts
+                {t("Loading Layouts")}
               </h3>
               <p className="text-gray-600">
-                {message || "Discovering and loading layout components..."}
+                {message || t("Discovering and loading layout components...")}
               </p>
             </div>
 
@@ -62,11 +65,11 @@ const LoadingStates: React.FC<LoadingStatesProps> = ({ type, message }) => {
 
             <div className="space-y-2">
               <h3 className="text-xl font-semibold text-gray-900">
-                Something went wrong
+                {t("Something went wrong")}
               </h3>
               <p className="text-gray-600 text-sm leading-relaxed">
                 {message ||
-                  "Failed to load layouts. Please check your layout files and try again."}
+                  t("Failed to load layouts. Please check your layout files and try again.")}
               </p>
             </div>
           </CardContent>
@@ -86,16 +89,15 @@ const LoadingStates: React.FC<LoadingStatesProps> = ({ type, message }) => {
 
             <div className="space-y-2">
               <h3 className="text-xl font-semibold text-gray-700">
-                No Layouts Found
+                {t("No Layouts Found")}
               </h3>
               <p className="text-gray-500 text-sm leading-relaxed">
-                No valid layout files were discovered. Make sure your layout
-                components export both a default component and a Schema.
+                {t("No valid layout files were discovered. Make sure your layout components export both a default component and a Schema.")}
               </p>
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg text-left text-xs text-gray-600">
-              <p className="font-medium mb-2">Expected structure:</p>
+              <p className="font-medium mb-2">{t("Expected structure:")}</p>
               <code className="block">
                 export default MyLayout
                 <br />

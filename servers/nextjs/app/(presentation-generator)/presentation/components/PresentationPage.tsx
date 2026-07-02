@@ -30,6 +30,7 @@ import { applyPresentationThemeToElement } from "../utils/applyPresentationTheme
 
 import PresentationHeader from "./PresentationHeader";
 import Chat from "./Chat";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface LoadingState {
   isLoading: boolean;
@@ -37,6 +38,12 @@ interface LoadingState {
   showProgress: boolean;
   duration: number;
   extra_info?: string;
+}
+
+interface StreamingProgress {
+  current: number;
+  total: number;
+  stage?: string;
 }
 
 const DEFAULT_LOADING_STATE: LoadingState = {
@@ -67,6 +74,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
   presentation_id,
 }) => {
   const pathname = usePathname();
+  const { locale, t } = useI18n();
   // State management
   const [loading, setLoading] = useState(true);
   const [loadingState, setLoadingState] =
@@ -80,6 +88,8 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
   const [glowingSlideIndex, setGlowingSlideIndex] = useState<number | null>(null);
   const [chatTargetedSlides, setChatTargetedSlides] = useState<number[]>([]);
   const [error, setError] = useState(false);
+  const [streamingProgress, setStreamingProgress] =
+    useState<StreamingProgress | null>(null);
   const slidesScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
 
@@ -128,7 +138,8 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
     stream,
     setLoading,
     setError,
-    fetchUserSlides
+    fetchUserSlides,
+    setStreamingProgress
   );
 
   useEffect(() => {
@@ -139,6 +150,34 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
 
     setLoadingState(stream ? STREAM_LOADING_STATE : DEFAULT_LOADING_STATE);
   }, [loading, stream]);
+
+  useEffect(() => {
+    if (stream) return;
+    setStreamingProgress(null);
+  }, [stream]);
+
+  const progressTotal = Math.max(
+    streamingProgress?.total ?? 0,
+    presentationData?.n_slides ?? 0,
+    slidesLength
+  );
+  const progressCurrent =
+    progressTotal > 0
+      ? Math.min(
+          progressTotal,
+          Math.max(streamingProgress?.current ?? 0, slidesLength)
+        )
+      : 0;
+  const realProgress =
+    progressTotal > 0
+      ? Math.min(99, Math.round((progressCurrent / progressTotal) * 100))
+      : undefined;
+  const progressLabel =
+    progressTotal > 0
+      ? locale === "zh-CN"
+        ? `已生成 ${progressCurrent} / ${progressTotal} 页`
+        : `Generated ${progressCurrent} / ${progressTotal} slides`
+      : undefined;
 
   useEffect(() => {
     if (!isStreaming) return;
@@ -315,14 +354,14 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
           role="alert"
         >
           <AlertCircle className="w-16 h-16 mb-4 text-red-500" />
-          <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+          <h2 className="text-xl font-semibold mb-2">{t("Something went wrong")}</h2>
           <p className="text-center mb-4">
-            We couldn't load your presentation. Please try again.
+            {t("We couldn't load your presentation. Please try again.")}
           </p>
           <div className="flex gap-2 justify-center items-center">
 
-            <Button onClick={() => { trackEvent(MixpanelEvent.PresentationPage_Refresh_Page_Button_Clicked, { pathname }); window.location.reload(); }}>Refresh Page</Button>
-            <Button onClick={() => { trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/upload" }); router.push("/upload"); }}>Go to Upload</Button>
+            <Button onClick={() => { trackEvent(MixpanelEvent.PresentationPage_Refresh_Page_Button_Clicked, { pathname }); window.location.reload(); }}>{t("Refresh Page")}</Button>
+            <Button onClick={() => { trackEvent(MixpanelEvent.Navigation, { from: pathname, to: "/upload" }); router.push("/upload"); }}>{t("Go to Upload")}</Button>
           </div>
         </div>
       </div>
@@ -337,6 +376,8 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
         showProgress={loadingState.showProgress}
         duration={loadingState.duration}
         extra_info={loadingState.extra_info}
+        progress={realProgress}
+        progressLabel={progressLabel}
       />
       <div
         style={{
@@ -353,6 +394,7 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
               onSlideClick={handleSlideClick}
               presentationId={presentation_id}
               loading={loading}
+              streamingTotalSlides={progressTotal}
             />
           </div>
           <div className="w-full min-w-0 h-full flex-1 pt-[18px]">
@@ -362,9 +404,8 @@ const PresentationPage: React.FC<PresentationPageProps> = ({
             >
               <div className="w-full max-w-[1280px] min-h-full mx-auto flex flex-col items-center pb-8">
                 {!presentationData ||
-                  loading ||
-                  !presentationData?.slides ||
-                  presentationData?.slides.length === 0 ? (
+                !presentationData?.slides ||
+                presentationData?.slides.length === 0 ? (
                   <div className="relative w-full h-[calc(100vh-120px)] mx-auto hide-scrollbar">
                     <div className="">
                       {Array.from({ length: 2 }).map((_, index) => (

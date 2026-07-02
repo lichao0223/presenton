@@ -50,6 +50,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
+    "dom-to-pptx": "^2.0.2",
     "html2canvas": "^1.4.1",
     "jsonrepair": "^3.12.0",
     "lucide-react": "^0.447.0",

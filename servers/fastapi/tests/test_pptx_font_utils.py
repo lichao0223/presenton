@@ -396,6 +396,49 @@ def test_localize_preview_asset_urls_leaves_external_urls(monkeypatch):
     assert calls == []
 
 
+def test_localize_preview_asset_urls_uses_converted_emf_data_uri(monkeypatch, tmp_path):
+    emf_path = tmp_path / "asset.emf"
+    emf_path.write_bytes(b"emf")
+
+    monkeypatch.setattr(
+        fonts_and_slides_preview,
+        "resolve_app_path_to_filesystem",
+        lambda path_or_url: str(emf_path)
+        if path_or_url == "/app_data/pptx-to-html/session/images/asset.emf"
+        else None,
+    )
+
+    converted = "data:image/png;base64,Y29udmVydGVk"
+    html = '<img src="/app_data/pptx-to-html/session/images/asset.emf">'
+
+    localized = fonts_and_slides_preview._localize_preview_asset_urls(
+        html,
+        {str(emf_path): converted},
+    )
+
+    assert converted in localized
+    assert fonts_and_slides_preview.TRANSPARENT_IMAGE_DATA_URI not in localized
+
+
+def test_localize_preview_asset_urls_omits_unconverted_emf(monkeypatch, tmp_path):
+    emf_path = tmp_path / "asset.emf"
+    emf_path.write_bytes(b"emf")
+
+    monkeypatch.setattr(
+        fonts_and_slides_preview,
+        "resolve_app_path_to_filesystem",
+        lambda path_or_url: str(emf_path)
+        if path_or_url == "/app_data/pptx-to-html/session/images/asset.emf"
+        else None,
+    )
+
+    html = '<img src="/app_data/pptx-to-html/session/images/asset.emf">'
+
+    localized = fonts_and_slides_preview._localize_preview_asset_urls(html)
+
+    assert fonts_and_slides_preview.TRANSPARENT_IMAGE_DATA_URI in localized
+
+
 @pytest.mark.anyio
 async def test_create_slide_previews_from_html_uses_converter_dimensions_and_fonts(
     monkeypatch,

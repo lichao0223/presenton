@@ -30,6 +30,7 @@ import { RootState } from "@/store/store";
 import { ImagesApi } from "../../services/api/images";
 import CurrentConfig from "./CurrentConfig";
 import { LLMConfig } from "@/types/llm_config";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const STOCK_IMAGE_PROVIDERS = new Set(["pexels", "pixabay"]);
 const FILE_TYPE_WORD = new Set([".doc", ".docx", ".docm", ".odt", ".rtf"]);
@@ -114,6 +115,7 @@ const getSelectedImageQuality = (config?: LLMConfig): string => {
 };
 
 const UploadPage = () => {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useDispatch();
@@ -413,7 +415,7 @@ const UploadPage = () => {
           </div>
         </div>
         <div className="p-4 ">
-          <h3 className="text-sm font-medium text-[#333333] mb-2">Attachments (optional)</h3>
+          <h3 className="text-sm font-medium text-[#333333] mb-2">{t("Attachments (optional)")}</h3>
           <SupportingDoc
             files={[...files]}
             onFilesChange={setFiles}
@@ -428,7 +430,7 @@ const UploadPage = () => {
             }}
             className="w-fit mr-0 ml-auto rounded-[28px] flex items-center justify-center py-5 px-4  text-[#101323] font-syne font-semibold text-xs  "
           >
-            <span>Get Started</span>
+            <span>{t("Get Started")}</span>
             <ChevronRight className="!w-5 !h-5 " />
           </Button>
         </div>

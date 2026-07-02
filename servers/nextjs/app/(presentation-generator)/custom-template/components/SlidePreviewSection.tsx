@@ -6,10 +6,10 @@ import {
     Loader2,
     Images,
     ChevronRight,
-    Sparkles
 } from "lucide-react";
 import { SlidePreviewSectionProps } from "../types";
 import { resolveBackendAssetUrl } from '@/utils/api'
+import { useI18n } from "@/i18n/I18nProvider";
 
 
 export const SlidePreviewSection: React.FC<SlidePreviewSectionProps> = ({
@@ -17,8 +17,11 @@ export const SlidePreviewSection: React.FC<SlidePreviewSectionProps> = ({
     onInitTemplate,
     isLoading,
 }) => {
+    const { t } = useI18n();
     const slideCount = previewData.slide_image_urls?.length || 0;
     const fontCount = Object.keys(previewData.fonts || {}).length;
+    const slideSummary = t("{count} slides ready").replace("{count}", String(slideCount));
+    const fontSummary = t("{count} fonts applied").replace("{count}", String(fontCount));
 
     return (
         <div className="my-8 max-w-[1440px] mx-auto">
@@ -32,11 +35,11 @@ export const SlidePreviewSection: React.FC<SlidePreviewSectionProps> = ({
                                 <Images className="w-6 h-6 text-[#7A5AF8]" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-semibold text-[#111827]">Slide Preview</h2>
+                                <h2 className="text-xl font-semibold text-[#111827]">{t("Slide Preview")}</h2>
                                 <p className="text-sm text-[#6B7280] mt-0.5">
-                                    {slideCount} slide{slideCount !== 1 ? 's' : ''} ready
+                                    {slideSummary}
                                     {fontCount > 0 && (
-                                        <> · {fontCount} font{fontCount !== 1 ? 's' : ''} applied</>
+                                        <> · {fontSummary}</>
                                     )}
                                 </p>
                             </div>
@@ -76,7 +79,7 @@ export const SlidePreviewSection: React.FC<SlidePreviewSectionProps> = ({
                 <div className="px-6 py-5 border-t border-[#F3F4F6] bg-gradient-to-r from-[#FAFAFA] to-white">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <p className="text-sm text-[#6B7280] max-w-md text-center sm:text-left">
-                            Ready to generate your template. Each slide will be converted to a reusable React component.
+                            {t("Ready to generate your template. Each slide will be converted to a reusable React component.")}
                         </p>
                         <Button
                             size="lg"
@@ -93,12 +96,12 @@ export const SlidePreviewSection: React.FC<SlidePreviewSectionProps> = ({
                             {isLoading ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                                    Starting...
+                                    {t("Starting...")}
                                 </>
                             ) : (
                                 <>
 
-                                    Generate Template
+                                    {t("Generate Template")}
                                     <ChevronRight className="w-4 h-4 ml-1" />
                                 </>
                             )}

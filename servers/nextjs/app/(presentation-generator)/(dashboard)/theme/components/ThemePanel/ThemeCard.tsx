@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { AlertTriangle, Check, Copy, Trash } from 'lucide-react'
 import { Theme } from '@/app/(presentation-generator)/services/api/types'
 import ToolTip from '@/components/ToolTip'
+import { useI18n } from '@/i18n/I18nProvider'
 
 interface ThemeCardProps {
   theme: Theme
@@ -12,6 +13,7 @@ interface ThemeCardProps {
 }
 
 export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete, showDeleteButton = true }) => {
+  const { t } = useI18n()
   if (!theme.data.colors['graph_0']) { return null }
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -53,9 +55,9 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-4">
               <AlertTriangle className="h-6 w-6 text-red-500" />
             </div>
-            <h3 className="text-lg font-semibold text-[#191919] mb-2">Delete Theme?</h3>
+            <h3 className="text-lg font-semibold text-[#191919] mb-2">{t("Delete Theme?")}</h3>
             <p className="text-sm text-gray-500 leading-relaxed">
-              You're about to delete <span className="font-medium text-gray-700">"{theme.name}"</span>. This action cannot be undone.
+              {t("You are about to delete")} <span className="font-medium text-gray-700">"{theme.name}"</span>. {t("This action cannot be undone.")}
             </p>
           </div>
           <div className="flex border-t border-gray-100">
@@ -63,7 +65,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
               onClick={() => setShowDeleteDialog(false)}
               className="flex-1 px-4 py-3.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               onClick={() => {
@@ -72,7 +74,7 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
               }}
               className="flex-1 px-4 py-3.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors border-l border-gray-100"
             >
-              Delete
+              {t("Delete")}
             </button>
           </div>
         </div>
@@ -84,21 +86,21 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
 
       <img src="/card_bg.svg" alt="" className="absolute top-0 z-[1] left-0 w-[99%] h-full object-cover" />
       <div className=" absolute top-0 left-0 flex items-center justify-between gap-2  z-[2] p-2">
-        <ToolTip content='Font' >
+        <ToolTip content={t("Font")} >
 
           <p className=" text-xs font-syne  flex gap-1 capitalize  items-center  rounded-[100px]  px-2.5 py-1 bg-[#3A3A3AF5] text-white font-semibold  z-40 ">
 
             {theme.data.fonts.textFont.name}
           </p>
         </ToolTip>
-        {theme.company_name && <ToolTip content='COMPANY'>
+        {theme.company_name && <ToolTip content={t("COMPANY")}>
 
           <p className=" text-xs font-syne  flex gap-1 capitalize  items-center  rounded-[100px]  px-2.5 py-1 bg-[#3A3A3AF5] text-white font-semibold  text-ellipsis overflow-hidden whitespace-nowrap z-40 ">
 
             {theme.company_name}
           </p>
         </ToolTip>}
-        {theme.logo_url && <ToolTip content='LOGO'>
+        {theme.logo_url && <ToolTip content={t("LOGO")}>
 
           <p className=" text-xs font-syne  flex gap-1 capitalize  items-center  rounded-[100px]  px-2.5 py-1 bg-[#3A3A3AF5] text-white font-semibold  z-40 ">
 
@@ -180,6 +182,5 @@ export const ThemeCard: React.FC<ThemeCardProps> = ({ theme, onSelect, onDelete,
   </div>)
 
 }
-
 
 

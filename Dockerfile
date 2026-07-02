@@ -33,7 +33,8 @@ FROM node:20-bookworm-slim AS nextjs-builder
 
 WORKDIR /app/servers/nextjs
 
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    PUPPETEER_SKIP_DOWNLOAD=1
 
 COPY servers/nextjs/package.json servers/nextjs/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \

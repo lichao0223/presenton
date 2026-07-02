@@ -10,6 +10,8 @@ interface OverlayLoaderProps {
   duration?: number;
   extra_info?: string;
   onProgressComplete?: () => void;
+  progress?: number;
+  progressLabel?: string;
 }
 
 export const OverlayLoader = ({
@@ -20,6 +22,8 @@ export const OverlayLoader = ({
   duration = 10,
   onProgressComplete,
   extra_info,
+  progress,
+  progressLabel,
 }: OverlayLoaderProps) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -39,7 +43,7 @@ export const OverlayLoader = ({
         zIndex: 1000,
       }}
       className={cn(
-        "fixed inset-0 bg-black/70 z-50 flex items-center justify-center transition-opacity duration-300",
+        "fixed inset-0 bg-black/40 z-50 flex items-center justify-center transition-opacity duration-300",
         isVisible ? "opacity-100" : "opacity-0"
       )}
     >
@@ -58,12 +62,21 @@ export const OverlayLoader = ({
         />
         {showProgress ? (
           <div className="w-full space-y-6 pt-4">
-            <ProgressBar duration={duration} onComplete={onProgressComplete} />
+            <ProgressBar
+              duration={duration}
+              onComplete={onProgressComplete}
+              value={progress}
+            />
             {text && (
               <div className="space-y-1">
                 <p className="text-[#191919] text-base text-center font-medium font-inter">
                   {text}
                 </p>
+                {progressLabel && (
+                  <p className="text-[#191919]/80 text-xs text-center font-semibold font-inter">
+                    {progressLabel}
+                  </p>
+                )}
                 {extra_info && (
                   <p className="text-[#191919]/80 text-xs text-center font-medium font-inter">
                     {extra_info}

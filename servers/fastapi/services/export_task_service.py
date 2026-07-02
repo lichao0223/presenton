@@ -82,6 +82,7 @@ class ExportTaskService:
         self.export_dir = self._resolve_export_dir()
         self.entrypoint_path = self._resolve_entrypoint_path(self.export_dir)
         self.converter_path = self._resolve_converter_path(self.export_dir)
+        self._html_to_images_supported: bool | None = None
 
     @staticmethod
     def _resolve_export_dir() -> str:
@@ -300,6 +301,85 @@ class ExportTaskService:
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+    async def _render_htmls_to_images_with_local_browser(
+        self,
+        htmls: list[str],
+        width: int,
+        height: int,
+    ) -> HtmlToImagesTaskResult:
+        temp_root = get_temp_directory_env() or os.path.join(
+            tempfile.gettempdir(), "presenton"
+        )
+        os.makedirs(temp_root, exist_ok=True)
+        output_dir = tempfile.mkdtemp(prefix="html-preview-images-", dir=temp_root)
+        temp_dir, task_path, response_path = self._create_task_paths()
+        renderer_path = os.path.join(
+            os.path.dirname(__file__),
+            "html_preview_renderer.cjs",
+        )
+
+        try:
+            with open(task_path, "w", encoding="utf-8") as task_file:
+                json.dump(
+                    {
+                        "htmls": htmls,
+                        "width": width,
+                        "height": height,
+                        "output_dir": output_dir,
+                    },
+                    task_file,
+                )
+
+            result = await self._run_bounded_child(
+                [self.node_binary, renderer_path, task_path, response_path],
+                cwd=self.export_dir,
+                timeout=self.timeout_seconds,
+                env=dict(self._build_node_env()),
+            )
+            if result["returncode"] != 0:
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "HTML preview rendering failed. "
+                        f"returncode={result['returncode']} "
+                        f"stderr={_snippet(result['stderr'])} stdout={_snippet(result['stdout'])}"
+                    ),
+                )
+            if not os.path.isfile(response_path):
+                raise HTTPException(
+                    status_code=500,
+                    detail="HTML preview rendering did not produce a response file",
+                )
+            with open(response_path, "r", encoding="utf-8") as response_file:
+                response_data = json.load(response_file)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="HTML preview rendering produced invalid JSON output",
+            ) from exc
+        except OSError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to run HTML preview renderer: {exc}",
+            ) from exc
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        raw_paths = response_data.get("file_paths")
+        if not isinstance(raw_paths, list) or len(raw_paths) != len(htmls):
+            raise HTTPException(
+                status_code=500,
+                detail="HTML preview rendering produced invalid output",
+            )
+
+        output_paths = [
+            self._resolve_output_path({"file_path": raw_path}) for raw_path in raw_paths
+        ]
+        for output_path in output_paths:
+            self._ensure_output_readable(output_path)
+
+        return HtmlToImagesTaskResult(paths=output_paths)
+
     async def _run_bounded_child(
         self,
         command: list[str],
@@ -459,6 +539,7 @@ class ExportTaskService:
         htmls: list[str],
         width: int,
         height: int,
+        progress_logger=None,
     ) -> HtmlToImagesTaskResult:
         if not htmls:
             raise HTTPException(
@@ -471,27 +552,50 @@ class ExportTaskService:
                 detail="HTML-to-image dimensions must be positive",
             )
 
-        try:
-            response_data = await self._run_task(
-                {
-                    "type": "html-to-images",
-                    "htmls": htmls,
-                    "width": width,
-                    "height": height,
-                },
-                "HTML-to-images export task did not produce a response file",
-            )
-        except HTTPException as exc:
-            if "Invalid task type" not in str(exc.detail):
+        if self._html_to_images_supported is not False:
+            try:
+                response_data = await self._run_task(
+                    {
+                        "type": "html-to-images",
+                        "htmls": htmls,
+                        "width": width,
+                        "height": height,
+                    },
+                    "HTML-to-images export task did not produce a response file",
+                )
+                self._html_to_images_supported = True
+            except HTTPException as exc:
+                if "Invalid task type" not in str(exc.detail):
+                    raise
+                self._html_to_images_supported = False
+                LOGGER.warning(
+                    "[export_runtime] html-to-images is unavailable; "
+                    "falling back to one task per HTML document"
+                )
+        else:
+            response_data = None
+
+        if self._html_to_images_supported is False:
+            total = len(htmls)
+            if progress_logger:
+                progress_logger.info(
+                    f"Rendering {total} slide previews with local Chromium fallback"
+                )
+            try:
+                result = await self._render_htmls_to_images_with_local_browser(
+                    htmls, width, height
+                )
+            except Exception:
+                if progress_logger:
+                    progress_logger.error(
+                        "Failed rendering slide previews with local Chromium fallback"
+                    )
                 raise
-            LOGGER.warning(
-                "[export_runtime] html-to-images is unavailable; "
-                "falling back to one task per HTML document"
-            )
-            results = [
-                await self.render_html_to_image(html, width, height) for html in htmls
-            ]
-            return HtmlToImagesTaskResult(paths=[result.path for result in results])
+            if progress_logger:
+                progress_logger.info(
+                    f"Rendered {len(result.paths)} slide previews with local Chromium fallback"
+                )
+            return result
 
         raw_paths = response_data.get("file_paths")
         if not isinstance(raw_paths, list) or len(raw_paths) != len(htmls):

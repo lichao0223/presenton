@@ -2,6 +2,7 @@ import asyncio
 import base64
 import contextlib
 import html
+import json
 import mimetypes
 import os
 import re
@@ -65,13 +66,13 @@ class FontsUploadAndSlidesPreviewResponse(BaseModel):
 
 class _PreviewLogger:
     def info(self, message: str):
-        print(f"[fonts-preview] {message}")
+        print(f"[fonts-preview] {message}", flush=True)
 
     def warning(self, message: str):
-        print(f"[fonts-preview] WARNING: {message}")
+        print(f"[fonts-preview] WARNING: {message}", flush=True)
 
     def error(self, message: str):
-        print(f"[fonts-preview] ERROR: {message}")
+        print(f"[fonts-preview] ERROR: {message}", flush=True)
 
 
 PREVIEW_WIDTH = 1280
@@ -81,6 +82,11 @@ FONT_CHECK_UPLOAD_SIZE_ERROR = "File size must be less than 100MB."
 INVALID_PPTX_UPLOAD_ERROR = (
     "The uploaded PowerPoint file is corrupted or unsupported."
 )
+TRANSPARENT_IMAGE_DATA_URI = (
+    "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20"
+    "width%3D%221%22%20height%3D%221%22%3E%3C/svg%3E"
+)
+BROWSER_UNSUPPORTED_IMAGE_EXTENSIONS = {".emf", ".wmf"}
 
 
 def _preview_dimensions_from_document(width: float, height: float) -> Tuple[int, int]:
@@ -161,25 +167,51 @@ def _font_face_css_for_local_fonts(font_paths: List[str]) -> str:
     return "\n".join(rules)
 
 
-def _preview_asset_url_to_data_uri(url: str) -> str:
+def _resolve_preview_asset_path(url: str) -> Optional[str]:
     if not url:
-        return url
+        return None
 
-    parsed = urllib.parse.urlparse(url)
+    parsed_url = urllib.parse.urlparse(url)
+    parsed = parsed_url
     if parsed.scheme in ("http", "https"):
         if not parsed.path.startswith(("/app_data/", "/static/")):
-            return url
+            return None
         candidate = urllib.parse.unquote(parsed.path)
     elif parsed.scheme == "file":
         candidate = urllib.parse.unquote(parsed.path)
     elif url.startswith(("/app_data/", "/static/")):
         candidate = url
     else:
-        return url
+        return None
 
     resolved = resolve_app_path_to_filesystem(candidate)
-    if not resolved:
+    if not resolved or not os.path.isfile(resolved):
+        return None
+    return resolved
+
+
+def _preview_asset_url_to_data_uri(
+    url: str,
+    converted_metafile_data_uris: Optional[Dict[str, str]] = None,
+) -> str:
+    if not url:
         return url
+
+    parsed_url = urllib.parse.urlparse(url)
+    url_extension = os.path.splitext(parsed_url.path.lower())[1]
+    resolved = _resolve_preview_asset_path(url)
+
+    if not resolved:
+        if url_extension in BROWSER_UNSUPPORTED_IMAGE_EXTENSIONS:
+            return TRANSPARENT_IMAGE_DATA_URI
+        return url
+
+    extension = os.path.splitext(resolved.lower())[1]
+    if extension in BROWSER_UNSUPPORTED_IMAGE_EXTENSIONS:
+        converted = (converted_metafile_data_uris or {}).get(resolved)
+        if converted:
+            return converted
+        return TRANSPARENT_IMAGE_DATA_URI
 
     try:
         data = Path(resolved).read_bytes()
@@ -191,17 +223,24 @@ def _preview_asset_url_to_data_uri(url: str) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def _localize_preview_asset_urls(html: str) -> str:
+def _localize_preview_asset_urls(
+    html: str,
+    converted_metafile_data_uris: Optional[Dict[str, str]] = None,
+) -> str:
     def replace_attr(match: re.Match[str]) -> str:
         return (
             f"{match.group('prefix')}"
-            f"{_preview_asset_url_to_data_uri(match.group('url'))}"
+            f"{_preview_asset_url_to_data_uri(match.group('url'), converted_metafile_data_uris)}"
             f"{match.group('suffix')}"
         )
 
     def replace_css_url(match: re.Match[str]) -> str:
         quote = match.group("quote") or ""
-        return f"url({quote}{_preview_asset_url_to_data_uri(match.group('url'))}{quote})"
+        return (
+            f"url({quote}"
+            f"{_preview_asset_url_to_data_uri(match.group('url'), converted_metafile_data_uris)}"
+            f"{quote})"
+        )
 
     html = re.sub(
         r"(?P<prefix>\b(?:src|href|xlink:href)=['\"])(?P<url>[^'\"]+)(?P<suffix>['\"])",
@@ -215,6 +254,112 @@ def _localize_preview_asset_urls(html: str) -> str:
         html,
         flags=re.IGNORECASE,
     )
+
+
+def _browser_unsupported_image_urls(slide_htmls: List[str]) -> List[str]:
+    urls: List[str] = []
+    for slide_html in slide_htmls:
+        for match in re.finditer(
+            r"(?:src|href|xlink:href)=['\"]([^'\"]+)['\"]|url\(['\"]?([^)'\" ]+)",
+            slide_html,
+            flags=re.IGNORECASE,
+        ):
+            url = match.group(1) or match.group(2) or ""
+            path = urllib.parse.urlparse(url).path.lower()
+            if os.path.splitext(path)[1] in BROWSER_UNSUPPORTED_IMAGE_EXTENSIONS:
+                urls.append(url)
+    return urls
+
+
+def _count_browser_unsupported_image_refs(slide_htmls: List[str]) -> int:
+    return len(_browser_unsupported_image_urls(slide_htmls))
+
+
+def _browser_unsupported_image_paths(slide_htmls: List[str]) -> List[str]:
+    paths: List[str] = []
+    seen: Set[str] = set()
+    for url in _browser_unsupported_image_urls(slide_htmls):
+        resolved = _resolve_preview_asset_path(url)
+        if not resolved or resolved in seen:
+            continue
+        paths.append(resolved)
+        seen.add(resolved)
+    return paths
+
+
+async def _convert_browser_unsupported_images_to_data_uris(
+    image_paths: List[str],
+    width: int,
+    height: int,
+    logger,
+) -> Dict[str, str]:
+    if not image_paths:
+        return {}
+
+    helper_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "services",
+        "metafile_preview_converter.cjs",
+    )
+    if not os.path.isfile(helper_path):
+        logger.warning("Metafile preview converter helper is missing")
+        return {}
+
+    temp_root = tempfile.mkdtemp(prefix="metafile-preview-task-")
+    task_path = os.path.join(temp_root, "task.json")
+    response_path = os.path.join(temp_root, "response.json")
+    try:
+        with open(task_path, "w", encoding="utf-8") as task_file:
+            json.dump(
+                {
+                    "files": image_paths,
+                    "max_width": width,
+                    "max_height": height,
+                },
+                task_file,
+            )
+
+        logger.info(f"Converting {len(image_paths)} EMF/WMF preview assets to PNG")
+        result = await EXPORT_TASK_SERVICE._run_bounded_child(
+            [EXPORT_TASK_SERVICE.node_binary, helper_path, task_path, response_path],
+            cwd=EXPORT_TASK_SERVICE.export_dir,
+            timeout=EXPORT_TASK_SERVICE.timeout_seconds,
+            env=dict(EXPORT_TASK_SERVICE._build_node_env()),
+        )
+        if result["returncode"] != 0:
+            logger.warning(
+                "EMF/WMF conversion failed: "
+                f"returncode={result['returncode']} stderr={str(result['stderr'])[-500:]}"
+            )
+            return {}
+        if not os.path.isfile(response_path):
+            logger.warning("EMF/WMF conversion did not produce a response file")
+            return {}
+
+        with open(response_path, "r", encoding="utf-8") as response_file:
+            response = json.load(response_file)
+        conversions = response.get("conversions")
+        errors = response.get("errors")
+        if isinstance(errors, dict) and errors:
+            logger.warning(
+                f"EMF/WMF conversion skipped {len(errors)} assets that could not be converted"
+            )
+        if not isinstance(conversions, dict):
+            return {}
+        converted = {
+            path: data_uri
+            for path, data_uri in conversions.items()
+            if isinstance(path, str)
+            and isinstance(data_uri, str)
+            and data_uri.startswith("data:image/png;base64,")
+        }
+        logger.info(f"Converted {len(converted)} EMF/WMF preview assets")
+        return converted
+    except Exception as exc:
+        logger.warning(f"EMF/WMF conversion failed: {exc}")
+        return {}
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
 
 
 def _normalized_css_font_family(value: str) -> str:
@@ -378,13 +523,40 @@ async def render_pptx_slides_to_images(
     logger.info(
         f"Rendering {len(slide_htmls)} slide previews from PPTX-to-HTML at {width}x{height}"
     )
+    unsupported_image_refs = _count_browser_unsupported_image_refs(slide_htmls)
+    unsupported_image_paths = _browser_unsupported_image_paths(slide_htmls)
+    converted_metafile_data_uris: Dict[str, str] = {}
+    if unsupported_image_refs:
+        logger.warning(
+            "PPTX-to-HTML produced "
+            f"{unsupported_image_refs} EMF/WMF image references; Chromium cannot "
+            "render these Office vector formats directly."
+        )
+        converted_metafile_data_uris = (
+            await _convert_browser_unsupported_images_to_data_uris(
+                unsupported_image_paths,
+                width,
+                height,
+                logger,
+            )
+        )
+        omitted_count = len(unsupported_image_paths) - len(converted_metafile_data_uris)
+        if omitted_count > 0:
+            logger.warning(
+                f"{omitted_count} EMF/WMF preview assets could not be converted "
+                "and will be omitted from previews."
+            )
 
     localized_slide_htmls = []
     localized_font_css = _localize_preview_asset_urls(
-        "\n".join(css for css in (pptx_document.font_css, local_font_css) if css)
+        "\n".join(css for css in (pptx_document.font_css, local_font_css) if css),
+        converted_metafile_data_uris,
     )
     for slide_html in slide_htmls:
-        localized_slide_html = _localize_preview_asset_urls(slide_html)
+        localized_slide_html = _localize_preview_asset_urls(
+            slide_html,
+            converted_metafile_data_uris,
+        )
         localized_slide_htmls.append(
             _build_slide_preview_html(
                 localized_slide_html,
@@ -397,14 +569,22 @@ async def render_pptx_slides_to_images(
             )
         )
 
-    rendered = await EXPORT_TASK_SERVICE.render_htmls_to_images(
-        htmls=localized_slide_htmls,
-        width=width,
-        height=height,
-    )
-    logger.info(
-        f"Rendered {len(rendered.paths)} HTML slide previews in one Chromium task"
-    )
+    try:
+        rendered = await EXPORT_TASK_SERVICE.render_htmls_to_images(
+            htmls=localized_slide_htmls,
+            width=width,
+            height=height,
+            progress_logger=logger,
+        )
+    except TypeError as exc:
+        if "progress_logger" not in str(exc):
+            raise
+        rendered = await EXPORT_TASK_SERVICE.render_htmls_to_images(
+            htmls=localized_slide_htmls,
+            width=width,
+            height=height,
+        )
+    logger.info(f"Rendered {len(rendered.paths)} HTML slide previews")
     return rendered.paths
 
 

@@ -1,13 +1,33 @@
+import path from "path";
+import { fileURLToPath } from "url";
+
+const nextConfigDirectory = path.dirname(fileURLToPath(import.meta.url));
+
 const presentonHttpHostPort =
   process.env.PRESENTON_HTTP_HOST_PORT ||
   process.env.PRESENTON_HOST_HTTP_PORT ||
   process.env.PRESENTON_PUBLIC_PORT ||
-  "5001";
+  "8010";
+
+const domToPptxTracingIncludes = [
+  "./scripts/dom-to-pptx-exporter.mjs",
+  "./vendor/landppt-dom-to-pptx/**/*",
+  "./node_modules/dom-to-pptx/**/*",
+  "./node_modules/jszip/**/*",
+  "./node_modules/puppeteer/**/*",
+  "./node_modules/puppeteer-core/**/*",
+  "./node_modules/@puppeteer/**/*",
+];
 
 const nextConfig = {
   reactStrictMode: false,
+  devIndicators: false,
   distDir: ".next-build",
   output: "standalone",
+  outputFileTracingRoot: nextConfigDirectory,
+  turbopack: {
+    root: nextConfigDirectory,
+  },
   ...(process.env.NODE_ENV !== "production"
     ? {
         allowedDevOrigins: [
@@ -18,13 +38,24 @@ const nextConfig = {
         ],
       }
     : {}),
+  outputFileTracingIncludes: {
+    "/api/export-presentation/dom-to-pptx": domToPptxTracingIncludes,
+  },
 
-  // Rewrites for development - proxy font requests to FastAPI backend
+  // Rewrites for development - proxy app data and API requests to FastAPI.
   async rewrites() {
     return [
       {
-        source: '/app_data/fonts/:path*',
-        destination: `http://localhost:${presentonHttpHostPort}/app_data/fonts/:path*`,
+        source: '/app_data/:path*',
+        destination: `http://localhost:${presentonHttpHostPort}/app_data/:path*`,
+      },
+      {
+        source: '/static/:path*',
+        destination: `http://localhost:${presentonHttpHostPort}/static/:path*`,
+      },
+      {
+        source: '/api/v1/:path*',
+        destination: `http://localhost:${presentonHttpHostPort}/api/v1/:path*`,
       },
     ];
   },

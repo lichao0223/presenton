@@ -1,6 +1,8 @@
 name: Docker Release
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
   release:
     types: [published]
@@ -14,8 +16,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_NAME: ghcr.io/presenton/presenton
-  MOVING_TAG: dev
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  MOVING_TAG: latest
 
 jobs:
   build-and-push:
@@ -62,7 +64,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.docker-tags.outputs.tags }}
           cache-from: type=gha
@@ -74,4 +76,3 @@ jobs:
         run: |
           docker buildx imagetools inspect "${IMAGE_NAME}:${VERIFY_TAG}" | tee image-inspect.txt
           grep -q "linux/amd64" image-inspect.txt
-          grep -q "linux/arm64" image-inspect.txt

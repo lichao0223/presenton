@@ -1,8 +1,9 @@
 'use client'
 
 import React, { ChangeEvent, useEffect, useMemo, useState } from 'react'
-import { File, Paperclip, Plus, X } from 'lucide-react'
+import { File, Plus, X } from 'lucide-react'
 import { notify } from '@/components/ui/sonner'
+import { useI18n } from '@/i18n/I18nProvider'
 
 interface SupportingDocProps {
     files: File[]
@@ -65,6 +66,7 @@ const SupportingDoc = ({
     accept = ACCEPT_DEFAULT,
     multiple = true,
 }: SupportingDocProps) => {
+    const { t } = useI18n()
     const [isDragging, setIsDragging] = useState(false)
     const [previewUrls, setPreviewUrls] = useState<(string | null)[]>([])
 
@@ -88,7 +90,7 @@ const SupportingDoc = ({
     const handleValidate = (filesToReview: File[]) => {
         const disallowed = filesToReview.filter((file) => !isAllowedFile(file))
         if (disallowed.length > 0) {
-            notify.error('Some files are not supported', 'Supported: Word, PowerPoint, spreadsheets, PDF/TXT, and image files.')
+            notify.error(t('Some files are not supported'), t('Supported: Word, PowerPoint, spreadsheets, PDF/TXT, and image files.'))
         }
     }
 
@@ -97,7 +99,7 @@ const SupportingDoc = ({
             return candidateFiles
         }
 
-        notify.warning('Maximum file limit reached', `You can upload up to ${MAX_SUPPORTED_FILES} documents only.`)
+        notify.warning(t('Maximum file limit reached'), t('You can upload up to {count} documents only.').replace('{count}', String(MAX_SUPPORTED_FILES)))
 
         return candidateFiles.slice(0, MAX_SUPPORTED_FILES)
     }
@@ -112,7 +114,7 @@ const SupportingDoc = ({
         onFilesChange(allowedFiles)
         handleValidate(nextFiles)
         if (allowedFiles.length > files.length) {
-            notify.success('Files selected', `${allowedFiles.length - files.length} file(s) have been added.`)
+            notify.success(t('Files selected'), t('{count} file(s) have been added.').replace('{count}', String(allowedFiles.length - files.length)))
         }
         e.currentTarget.value = ''
     }
@@ -130,7 +132,7 @@ const SupportingDoc = ({
         onFilesChange(allowedFiles)
         handleValidate(nextFiles)
         if (allowedFiles.length > files.length) {
-            notify.success('Files selected', `${allowedFiles.length - files.length} file(s) have been added.`)
+            notify.success(t('Files selected'), t('{count} file(s) have been added.').replace('{count}', String(allowedFiles.length - files.length)))
         }
     }
 
@@ -158,7 +160,7 @@ const SupportingDoc = ({
         <div className="space-y-2" data-testid="attachments-uploader">
             <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600 font-syne">
-                    {hasFiles ? `${filteredFiles.length} attachment${filteredFiles.length > 1 ? 's' : ''}` : ''}
+                    {hasFiles ? t('{count} attachment(s)').replace('{count}', String(filteredFiles.length)) : ''}
                 </p>
                 {hasFiles && <button
                     type="button"
@@ -168,7 +170,7 @@ const SupportingDoc = ({
                     data-testid="attachments-clear-button"
                     aria-disabled={!hasFiles}
                 >
-                    Clear all
+                    {t('Clear all')}
                 </button>}
             </div>
 
@@ -192,13 +194,13 @@ const SupportingDoc = ({
                             <Plus className='w-3 h-3' />
                         </div>
                     </div>
-                    <p className='text-[#808080] text-sm  font-normal'>(Office docs, spreadsheets, images, PDF/TXT)</p>
+                    <p className='text-[#808080] text-sm  font-normal'>{t('(Office docs, spreadsheets, images, PDF/TXT)')}</p>
                 </div>
             </label>
 
             {hasFiles && (
                 <div className="mt-2">
-                    <ul data-testid="file-list" className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label="Attached files">
+                    <ul data-testid="file-list" className="grid grid-cols-1 gap-2 sm:grid-cols-2" aria-label={t("Attached files")}>
                         {filteredFiles.map((file, idx) => (
                             <li
                                 key={`${file.name}-${idx}`}
@@ -224,7 +226,7 @@ const SupportingDoc = ({
                                     type="button"
                                     onClick={() => handleRemoveFileAt(idx)}
                                     className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded text-red-600 hover:bg-red-50 hover:text-red-700"
-                                    aria-label={`Remove ${file.name}`}
+                                    aria-label={t("Remove {file}").replace("{file}", file.name)}
                                     data-testid="remove-file-button"
                                 >
                                     <X className="h-5 w-5" />

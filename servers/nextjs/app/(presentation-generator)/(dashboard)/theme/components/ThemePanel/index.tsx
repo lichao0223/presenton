@@ -33,6 +33,7 @@ import ThemeApi from '@/app/(presentation-generator)/services/api/theme'
 import { useFontLoader } from '@/app/(presentation-generator)/hooks/useFontLoad'
 import Link from 'next/link'
 import { MixpanelEvent, trackEvent } from '@/utils/mixpanel'
+import { useI18n } from '@/i18n/I18nProvider'
 
 // Fallback theme used before defaults are loaded from API (unified Theme type)
 const FALLBACK_THEME: Theme = {
@@ -67,6 +68,7 @@ const FALLBACK_THEME: Theme = {
   },
 }
 const ThemePanel: React.FC = () => {
+  const { t } = useI18n()
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
@@ -971,7 +973,7 @@ const ThemePanel: React.FC = () => {
       <div className='py-[28px] flex justify-between'>
 
         <h3 className=" text-[28px]  tracking-[-0.84px] font-unbounded font-normal text-[#101828] flex items-center gap-2">
-          Themes
+          {t("Themes")}
         </h3>
         <Link
           href="/theme?tab=new-theme"
@@ -980,15 +982,15 @@ const ThemePanel: React.FC = () => {
             source: "theme_page_header",
           })}
           className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-black text-sm font-semibold font-syne shadow-sm hover:shadow-md"
-          aria-label="Create new theme"
+          aria-label={t("Create new theme")}
           style={{
             borderRadius: "48px",
             background: "linear-gradient(270deg, #D5CAFC 2.4%, #E3D2EB 27.88%, #F4DCD3 69.23%, #FDE4C2 100%)",
           }}
         >
 
-          <span className="hidden md:inline">New Theme</span>
-          <span className="md:hidden">New</span>
+          <span className="hidden md:inline">{t("New Theme")}</span>
+          <span className="md:hidden">{t("New")}</span>
           <ChevronRight className="w-4 h-4" />
         </Link>
       </div>
@@ -1002,7 +1004,7 @@ const ThemePanel: React.FC = () => {
           style={{
             background: tab === 'custom' ? 'linear-gradient(270deg, #D5CAFC 2.4%, #E3D2EB 27.88%, #F4DCD3 69.23%, #FDE4C2 100%)' : 'transparent'
           }}
-        >Custom</button>
+        >{t("Custom")}</button>
         <svg xmlns="http://www.w3.org/2000/svg" className='mx-1' width="2" height="17" viewBox="0 0 2 17" fill="none">
           <path d="M1 0V16.5" stroke="#EDECEC" strokeWidth="2" />
         </svg>
@@ -1014,7 +1016,7 @@ const ThemePanel: React.FC = () => {
           style={{
             background: tab === 'default' ? 'linear-gradient(270deg, #D5CAFC 2.4%, #E3D2EB 27.88%, #F4DCD3 69.23%, #FDE4C2 100%)' : 'transparent'
           }}
-        >Built-in</button>
+        >{t("Built-in")}</button>
       </div>
       {/* Built-in Themes */}
 

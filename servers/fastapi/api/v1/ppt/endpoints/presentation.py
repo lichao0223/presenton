@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import AsyncIterator
 from datetime import datetime
 import json
 import logging
@@ -44,9 +45,14 @@ from utils.llm_calls.generate_presentation_outlines import (
 )
 from models.sql.slide import SlideModel
 from models.sql.presentation_layout_code import PresentationLayoutCodeModel
-from models.sse_response import SSECompleteResponse, SSEErrorResponse, SSEResponse
+from models.sse_response import (
+    SSECompleteResponse,
+    SSEErrorResponse,
+    SSEProgressResponse,
+    SSEResponse,
+)
 
-from services.database import get_async_session
+from services.database import async_session_maker, get_async_session
 from services.concurrent_service import CONCURRENT_SERVICE
 from models.sql.presentation import PresentationModel
 from models.sql.async_presentation_generation_status import (
@@ -89,6 +95,105 @@ logger = logging.getLogger(__name__)
 
 
 PRESENTATION_ROUTER = APIRouter(prefix="/presentation", tags=["Presentation"])
+PRESENTATION_STREAM_CHANNELS: dict[uuid.UUID, "PresentationStreamChannel"] = {}
+PRESENTATION_STREAM_CHANNELS_LOCK = asyncio.Lock()
+
+
+class PresentationStreamChannel:
+    def __init__(self):
+        self._events: list[str] = []
+        self._subscribers: set[asyncio.Queue] = set()
+        self._lock = asyncio.Lock()
+        self._done = False
+        self.task: asyncio.Task | None = None
+
+    @property
+    def done(self):
+        return self._done
+
+    async def publish(self, event: str):
+        async with self._lock:
+            if self._done:
+                return
+            self._events.append(event)
+            subscribers = list(self._subscribers)
+
+        for queue in subscribers:
+            await queue.put(event)
+
+    async def close(self):
+        async with self._lock:
+            if self._done:
+                return
+            self._done = True
+            subscribers = list(self._subscribers)
+            self._subscribers.clear()
+
+        for queue in subscribers:
+            await queue.put(None)
+
+    async def subscribe(self) -> AsyncIterator[str]:
+        queue = asyncio.Queue()
+        async with self._lock:
+            replay_events = list(self._events)
+            is_done = self._done
+            if not is_done:
+                self._subscribers.add(queue)
+
+        for event in replay_events:
+            yield event
+
+        if is_done:
+            return
+
+        try:
+            while True:
+                event = await queue.get()
+                if event is None:
+                    return
+                yield event
+        finally:
+            async with self._lock:
+                self._subscribers.discard(queue)
+
+
+async def _get_or_create_presentation_stream_channel(
+    presentation_id: uuid.UUID,
+) -> tuple[PresentationStreamChannel, bool]:
+    async with PRESENTATION_STREAM_CHANNELS_LOCK:
+        channel = PRESENTATION_STREAM_CHANNELS.get(presentation_id)
+        if channel and not channel.done:
+            return channel, False
+
+        channel = PresentationStreamChannel()
+        PRESENTATION_STREAM_CHANNELS[presentation_id] = channel
+        return channel, True
+
+
+async def _remove_presentation_stream_channel(
+    presentation_id: uuid.UUID,
+    channel: PresentationStreamChannel,
+):
+    async with PRESENTATION_STREAM_CHANNELS_LOCK:
+        if PRESENTATION_STREAM_CHANNELS.get(presentation_id) is channel:
+            del PRESENTATION_STREAM_CHANNELS[presentation_id]
+
+
+async def _run_presentation_stream_generation(
+    presentation_id: uuid.UUID,
+    channel: PresentationStreamChannel,
+    stream: AsyncIterator[str],
+):
+    try:
+        async for event in safe_sse_stream(
+            stream,
+            logger=logger,
+            error_detail="Failed to generate presentation slides. Please try again.",
+        ):
+            await channel.publish(event)
+    finally:
+        await channel.close()
+        await _remove_presentation_stream_channel(presentation_id, channel)
 
 
 def _extract_custom_template_id(layout_name: Optional[str]) -> Optional[uuid.UUID]:
@@ -396,6 +501,39 @@ async def stream_presentation(
     presentation = await sql_session.get(PresentationModel, id)
     if not presentation:
         raise HTTPException(status_code=404, detail="Presentation not found")
+
+    existing_slides = (
+        (
+            await sql_session.execute(
+                select(SlideModel)
+                .where(SlideModel.presentation == id)
+                .order_by(SlideModel.index)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if existing_slides:
+        async def completed_stream():
+            response = PresentationWithSlides(
+                **presentation.model_dump(),
+                slides=existing_slides,
+                fonts=await _resolve_presentation_fonts(
+                    presentation,
+                    existing_slides,
+                    sql_session,
+                ),
+            )
+            yield SSECompleteResponse(
+                key="presentation",
+                value=response.model_dump(mode="json"),
+            ).to_string()
+
+        return StreamingResponse(
+            completed_stream(),
+            media_type="text/event-stream",
+        )
+
     if not presentation.structure:
         raise HTTPException(
             status_code=400,
@@ -438,9 +576,72 @@ async def stream_presentation(
             detail="Presentation structure contains an invalid slide layout",
         )
 
-    image_generation_service = ImageGenerationService(get_images_directory())
-
     async def inner():
+        async with async_session_maker() as generation_session:
+            generation_presentation = await generation_session.get(
+                PresentationModel,
+                id,
+            )
+            if not generation_presentation:
+                raise HTTPException(status_code=404, detail="Presentation not found")
+
+            try:
+                generation_structure = generation_presentation.get_structure()
+                generation_layout = generation_presentation.get_layout()
+                generation_outline = generation_presentation.get_presentation_outline()
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Presentation has invalid generated data",
+                ) from exc
+
+            image_generation_service = ImageGenerationService(get_images_directory())
+            async for event in generate_presentation_stream_events(
+                presentation_id=id,
+                presentation=generation_presentation,
+                structure=generation_structure,
+                layout=generation_layout,
+                outline=generation_outline,
+                sql_session=generation_session,
+                image_generation_service=image_generation_service,
+            ):
+                yield event
+
+    async def rollback_stream_session():
+        async with async_session_maker() as rollback_session:
+            await rollback_session.rollback()
+
+    channel, is_generator = await _get_or_create_presentation_stream_channel(id)
+    if is_generator:
+        channel.task = asyncio.create_task(
+            _run_presentation_stream_generation(
+                id,
+                channel,
+                safe_sse_stream(
+                    inner(),
+                    logger=logger,
+                    error_detail="Failed to generate presentation slides. Please try again.",
+                    on_error=rollback_stream_session,
+                ),
+            )
+        )
+
+    return StreamingResponse(
+        channel.subscribe(),
+        media_type="text/event-stream",
+    )
+
+
+async def generate_presentation_stream_events(
+    *,
+    presentation_id: uuid.UUID,
+    presentation: PresentationModel,
+    structure: PresentationStructureModel,
+    layout: PresentationLayoutModel,
+    outline: PresentationOutlineModel,
+    sql_session: AsyncSession,
+    image_generation_service: ImageGenerationService,
+):
         icon_weight = layout.icon_weight
         image_urls_for_slides = get_images_for_slides_from_outline(outline.slides)
 
@@ -454,7 +655,7 @@ async def stream_presentation(
             except Exception:
                 logger.exception(
                     "Slide asset generation failed: presentation_id=%s slide_index=%s",
-                    id,
+                    presentation_id,
                     slide_index,
                 )
                 asset_warnings_by_slide.setdefault(slide_index, []).append(
@@ -467,6 +668,8 @@ async def stream_presentation(
                 await asset_events.put(slide_index)
 
         slides: List[SlideModel] = []
+        total_slides = len(structure.slides)
+        yield SSEProgressResponse(current=0, total=total_slides).to_string()
         yield SSEResponse(
             event="response",
             data=json.dumps({"type": "chunk", "chunk": '{ "slides": [ '}),
@@ -490,7 +693,7 @@ async def stream_presentation(
                 return
 
             slide = SlideModel(
-                presentation=id,
+                presentation=presentation_id,
                 layout_group=layout.name,
                 layout=slide_layout.id,
                 index=i,
@@ -525,6 +728,18 @@ async def stream_presentation(
                 event="response",
                 data=json.dumps({"type": "chunk", "chunk": slide.model_dump_json()}),
             ).to_string()
+            yield SSEResponse(
+                event="response",
+                data=json.dumps(
+                    {
+                        "type": "slide",
+                        "slide_index": i,
+                        "total": total_slides,
+                        "slide": slide.model_dump(mode="json"),
+                    }
+                ),
+            ).to_string()
+            yield SSEProgressResponse(current=i + 1, total=total_slides).to_string()
 
             while True:
                 try:
@@ -580,7 +795,7 @@ async def stream_presentation(
 
         # Moved this here to make sure new slides are generated before deleting the old ones
         await sql_session.execute(
-            delete(SlideModel).where(SlideModel.presentation == id)
+            delete(SlideModel).where(SlideModel.presentation == presentation_id)
         )
         await sql_session.commit()
 
@@ -599,19 +814,6 @@ async def stream_presentation(
             key="presentation",
             value=response.model_dump(mode="json"),
         ).to_string()
-
-    async def rollback_stream_session():
-        await sql_session.rollback()
-
-    return StreamingResponse(
-        safe_sse_stream(
-            inner(),
-            logger=logger,
-            error_detail="Failed to generate presentation slides. Please try again.",
-            on_error=rollback_stream_session,
-        ),
-        media_type="text/event-stream",
-    )
 
 
 @PRESENTATION_ROUTER.patch("/update", response_model=PresentationWithSlides)
