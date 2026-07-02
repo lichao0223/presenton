@@ -17,6 +17,12 @@ const domToPptxTracingIncludes = [
   "./node_modules/puppeteer/**/*",
   "./node_modules/puppeteer-core/**/*",
   "./node_modules/@puppeteer/**/*",
+  "./node_modules/chromium-bidi/**/*",
+  "./node_modules/mitt/**/*",
+  "./node_modules/devtools-protocol/**/*",
+  "./node_modules/typed-query-selector/**/*",
+  "./node_modules/webdriver-bidi-protocol/**/*",
+  "./node_modules/ws/**/*",
 ];
 
 const nextConfig = {
