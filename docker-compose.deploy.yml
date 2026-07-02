@@ -8,6 +8,8 @@ services:
       - "${PRESENTON_CODEX_CALLBACK_PORT:-1455}:1455"
     volumes:
       - ./app_data:/app_data
+    env_file:
+      - .env
     environment:
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
       FASTAPI_LOG_LEVEL: ${FASTAPI_LOG_LEVEL:-INFO}

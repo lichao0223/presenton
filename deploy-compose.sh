@@ -55,6 +55,20 @@ ensure_compose_file() {
   echo "已下载 $COMPOSE_FILE"
 }
 
+refresh_compose_file() {
+  local tmp_file="${COMPOSE_FILE}.tmp"
+
+  echo "正在从 GitHub 更新 $COMPOSE_FILE..."
+  if download_file "$COMPOSE_FILE_URL" "$tmp_file"; then
+    mv "$tmp_file" "$COMPOSE_FILE"
+    echo "已更新 $COMPOSE_FILE"
+    return
+  fi
+
+  rm -f "$tmp_file"
+  echo "更新 $COMPOSE_FILE 失败，继续使用本地文件。"
+}
+
 ensure_env_file() {
   if [ -f "$ENV_FILE" ]; then
     return
@@ -122,6 +136,7 @@ case "$ACTION" in
     show_urls
     ;;
   update)
+    refresh_compose_file
     compose pull presenton
     compose up -d presenton
     show_urls
