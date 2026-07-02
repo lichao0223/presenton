@@ -64,6 +64,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Checking Fonts...": "正在检查字体...",
     "Checking for models...": "正在检查模型...",
     "ChatGPT model": "ChatGPT 模型",
+    "Celebrate again!": "再庆祝一次！",
     "Choose Slide Layout": "选择幻灯片布局",
     "Choose a layout group before generating your presentation.":
       "生成演示文稿前请先选择布局组。",
@@ -211,9 +212,12 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Get Started": "开始",
     "Go to Upload": "前往上传",
     "Go to home": "返回首页",
+    "Go to your dashboard": "前往你的仪表盘",
     "Got it!": "知道了",
     "GPT Image 1.5 Quality": "GPT Image 1.5 图片质量",
     "Help": "帮助",
+    "Help improve Presenton by sharing anonymous usage data.":
+      "分享匿名使用数据，帮助改进 Presenton。",
     "Image Generation Settings": "生图设置",
     "Image API key": "生图 API 密钥",
     "Image Provider": "生图提供商",
@@ -259,6 +263,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Model": "模型",
     "Model Controls": "模型控制",
     "Model name": "模型名称",
+    "My First Presentation": "我的第一个演示文稿",
     "New": "新建",
     "New Theme": "新建主题",
     "New Themes": "新建主题",
@@ -543,6 +548,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Web Search Settings": "联网搜索设置",
     "Web Search Provider": "联网搜索提供商",
     "Web search disabled": "联网搜索已关闭",
+    "Welcome on board!": "欢迎加入！",
     "Workflow JSON": "工作流 JSON",
     "What changes would you like? e.g., 'Make the title larger' or 'Change colors to blue theme'":
       "你想做什么修改？例如“把标题调大”或“改成蓝色主题”",
@@ -555,6 +561,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "You don't have any presentations yet.": "你还没有任何演示文稿。",
     "Your password must be at least 6 characters.":
       "密码必须至少 6 个字符。",
+    "You’re all set. Let’s create your first presentation.":
+      "一切就绪。来创建你的第一个演示文稿吧。",
     "Your username must be at least 3 characters.":
       "用户名必须至少 3 个字符。",
     "You can continue without all fonts, but some text may not display correctly.":
