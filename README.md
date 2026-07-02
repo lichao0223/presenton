@@ -37,7 +37,31 @@ docker --version
 docker compose version
 ```
 
-### 2. 克隆仓库
+### 2. 获取部署脚本
+
+方式 A：只下载一键部署脚本。
+
+```bash
+mkdir -p presenton
+cd presenton
+curl -fsSL -o deploy-compose.sh https://raw.githubusercontent.com/lichao0223/presenton/main/deploy-compose.sh
+chmod +x ./deploy-compose.sh
+./deploy-compose.sh
+```
+
+脚本会自动下载 `docker-compose.deploy.yml`，并生成 `.env`。
+
+如果服务器没有 `curl`，也可以用 `wget`：
+
+```bash
+mkdir -p presenton
+cd presenton
+wget -qO deploy-compose.sh https://raw.githubusercontent.com/lichao0223/presenton/main/deploy-compose.sh
+chmod +x ./deploy-compose.sh
+./deploy-compose.sh
+```
+
+方式 B：克隆完整仓库。
 
 ```bash
 git clone https://github.com/lichao0223/presenton.git
@@ -58,7 +82,7 @@ chmod +x ./deploy-compose.sh
 ./deploy-compose.sh
 ```
 
-脚本第一次运行会自动生成 `.env`，创建 `app_data`，拉取镜像并启动服务。
+脚本第一次运行会自动生成 `.env`，创建 `app_data`，拉取镜像并启动服务。如果当前目录没有 `docker-compose.deploy.yml`，脚本会自动从 GitHub 下载。
 
 默认访问地址：
 
@@ -80,6 +104,8 @@ http://localhost:5001
 deploy-compose.sh
 docker-compose.deploy.yml
 ```
+
+如果只下载了 `deploy-compose.sh`，第一次运行时会自动补齐 `docker-compose.deploy.yml`。
 
 常用命令：
 

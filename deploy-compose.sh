@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.deploy.yml}"
+COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://raw.githubusercontent.com/lichao0223/presenton/main/docker-compose.deploy.yml}"
 PROJECT_NAME="${PROJECT_NAME:-presenton}"
 ENV_FILE="${ENV_FILE:-.env}"
 ACTION="${1:-start}"
@@ -19,6 +20,39 @@ require_command() {
     echo "请先安装 Docker Engine 和 Docker Compose Plugin。"
     exit 1
   fi
+}
+
+download_file() {
+  local url="$1"
+  local output="$2"
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL -o "$output" "$url"
+    return
+  fi
+
+  if command -v wget >/dev/null 2>&1; then
+    wget -qO "$output" "$url"
+    return
+  fi
+
+  echo "缺少下载工具：curl 或 wget"
+  echo "请安装其中一个，或手动下载 $COMPOSE_FILE。"
+  exit 1
+}
+
+ensure_compose_file() {
+  if [ -f "$COMPOSE_FILE" ]; then
+    return
+  fi
+
+  echo "未找到 $COMPOSE_FILE，正在从 GitHub 下载..."
+  if ! download_file "$COMPOSE_FILE_URL" "$COMPOSE_FILE"; then
+    rm -f "$COMPOSE_FILE"
+    echo "下载 $COMPOSE_FILE 失败：$COMPOSE_FILE_URL"
+    exit 1
+  fi
+  echo "已下载 $COMPOSE_FILE"
 }
 
 ensure_env_file() {
@@ -73,6 +107,7 @@ show_urls() {
 }
 
 require_command docker
+ensure_compose_file
 ensure_env_file
 mkdir -p app_data
 
