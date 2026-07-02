@@ -2,7 +2,7 @@ export const SUPPORTED_LOCALES = ["en", "zh-CN"] as const;
 
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
-export const DEFAULT_LOCALE: Locale = "en";
+export const DEFAULT_LOCALE: Locale = "zh-CN";
 export const I18N_STORAGE_KEY = "presenton-ui-locale";
 
 export const localeLabels: Record<Locale, string> = {
@@ -18,6 +18,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "API key": "API 密钥",
     "API Key (optional)": "API 密钥（可选）",
     "Actions": "操作",
+    "Account created": "账号已创建",
     "Add Slide": "添加幻灯片",
     "Add First Slide": "添加第一页",
     "Add a short summary of what this template is best for...":
@@ -36,6 +37,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Apply AI edits & tweaks": "应用 AI 编辑和微调",
     "Apply": "应用",
     "Applying...": "正在应用...",
+    "At least 6 characters": "至少 6 个字符",
     "Attached files": "已附加文件",
     "Attachments (optional)": "附件（可选）",
     "Attach files": "添加文件",
@@ -84,11 +86,16 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Content generated": "内容已生成",
     "Content:": "内容：",
     "Continue": "继续",
+    "Confirm password": "确认密码",
+    "Could not create account": "无法创建账号",
+    "Could not load login": "无法加载登录",
     "Could not parse schema from slide code": "无法从幻灯片代码解析结构",
     "Continue to image provider": "继续选择生图提供商",
     "Continue to Preview": "继续预览",
     "Continue to web search": "继续配置联网搜索",
     "Create": "创建",
+    "Create account": "创建账号",
+    "Create your admin login": "创建管理员登录",
     "Create new presentation": "新建演示文稿",
     "Create new theme": "新建主题",
     "Create presentation": "创建演示文稿",
@@ -226,6 +233,9 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Loading layouts": "正在加载布局",
     "Loading presentation": "正在加载演示文稿",
     "Loading...": "加载中...",
+    "Login unavailable": "登录服务不可用",
+    "Make sure both password fields match before continuing.":
+      "请确认两次输入的密码一致。",
     "Max 100MB": "最大 100MB",
     "Max chars": "最大字符数",
     "Max items": "最大项数",
@@ -281,6 +291,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "OpenAI-compatible URL": "OpenAI 兼容地址",
     "OpenAI-compatible root (usually ends with /v1); /v1 is added if omitted. API key above is optional for local proxies with no auth.":
       "OpenAI 兼容根地址（通常以 /v1 结尾）；未填写 /v1 时会自动补上。若本地代理不需要认证，上方 API 密钥可不填。",
+    "One-time setup for this deployment. You will use the same username and password on future visits.":
+      "这是此部署的一次性初始化。之后访问时将使用同一组用户名和密码。",
     "Optional": "可选",
     "Outline Error": "大纲错误",
     "Outline & Content": "大纲与内容",
@@ -293,6 +305,9 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
       "（Office 文档、表格、图片、PDF/TXT）",
     "PPTX. Only": "仅支持 PPTX",
     "Page not found": "页面未找到",
+    "Password": "密码",
+    "Password too short": "密码太短",
+    "Passwords do not match": "两次密码不一致",
     "Paste URL or code…": "粘贴 URL 或验证码…",
     "Paste your ComfyUI workflow JSON here (export via \"Export (API)\" in ComfyUI)":
       "在这里粘贴 ComfyUI 工作流 JSON（从 ComfyUI 的 “Export (API)” 导出）",
@@ -311,6 +326,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "{count} Layouts": "{count} 个布局",
     "Please wait": "请稍候",
     "Presentation (": "演示文稿（",
+    "Preparing your workspace...": "正在准备工作区...",
     "Preparing your workspace…": "正在准备工作区…",
     "Preparing your presentation outline": "正在准备演示文稿大纲",
     "Presentation": "演示文稿",
@@ -336,6 +352,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Region": "区域",
     "Refresh Page": "刷新页面",
     "Refresh token": "刷新令牌",
+    "Re-enter your password": "再次输入密码",
     "Regenerate": "重新生成",
     "Regenerate outline": "重新生成大纲",
     "Regenerating": "正在重新生成",
@@ -356,6 +373,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Save & Finish": "保存并完成",
     "Save Configuration": "保存配置",
     "Sales Pitch": "销售演示",
+    "Saving credentials...": "正在保存凭据...",
     "Saving Configuration...": "正在保存配置...",
     "Saving your template. This may take a moment…":
       "正在保存模板，可能需要一点时间…",
@@ -366,6 +384,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Search models...": "搜索模型...",
     "Search models…": "搜索模型…",
     "Search provider...": "搜索提供商...",
+    "Secure instance": "安全实例",
     "Send": "发送",
     "Select": "选择",
     "Select Provider": "选择提供商",
@@ -385,11 +404,20 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Select web search provider": "选择联网搜索提供商",
     "Session refresh failed": "会话刷新失败",
     "Session refreshed": "会话已刷新",
+    "Setup is complete for this instance. Use the username and password you configured.":
+      "此实例已完成初始化。请使用你配置的用户名和密码登录。",
     "Settings": "设置",
     "Settings saved": "设置已保存",
     "Sign in required": "需要登录",
+    "Sign in": "登录",
+    "Sign in to continue": "登录后继续",
+    "Sign in to view this page.": "请登录后查看此页面。",
     "Sign in with ChatGPT": "使用 ChatGPT 登录",
+    "Sign in with your new username and password to continue.":
+      "请使用新的用户名和密码登录后继续。",
+    "Signed in": "已登录",
     "Sign out": "退出登录",
+    "Signing in...": "正在登录...",
     "Sign-in failed": "登录失败",
     "Sign-out failed": "退出登录失败",
     "Signed out": "已退出登录",
@@ -415,6 +443,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Something went wrong while creating the presentation.":
       "创建演示文稿时出错。",
     "Something went wrong while saving.": "保存时出错。",
+    "Something went wrong. Please try again.": "出错了，请重试。",
     "Speaker notes": "演讲备注",
     "Standard": "标准",
     "Starting...": "正在开始...",
@@ -441,6 +470,10 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "The template was deleted successfully.": "模板已成功删除。",
     "Template creation was initialized successfully.":
       "模板创建已成功初始化。",
+    "The login service is unavailable right now. Please try again in a moment.":
+      "登录服务暂时不可用，请稍后重试。",
+    "The username or password is incorrect. Please try again.":
+      "用户名或密码错误，请重试。",
     "The font was removed from your upload list.":
       "该字体已从上传列表中移除。",
     "Theme": "主题",
@@ -453,6 +486,8 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
       "确定要删除这个模板吗？此操作无法撤销。",
     "This can take a few minutes depending on slide count.":
       "根据页数不同，这可能需要几分钟。",
+    "This deployment is protected. Enter your credentials to open the app.":
+      "此部署已受保护。请输入凭据以打开应用。",
     "Title Slide": "标题页",
     "Toggle deck sort order": "切换演示文稿排序",
     "Tone": "语气",
@@ -479,6 +514,9 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
     "Uploading logo...": "正在上传 Logo...",
     "Usage analytics": "使用分析",
     "Usage Analytics": "使用分析",
+    "Unauthorized": "未授权",
+    "Username": "用户名",
+    "Username too short": "用户名太短",
     "Verbosity": "详略程度",
     "Vision-capable text model required": "需要支持视觉输入的文本模型",
     "Choose a text model that accepts images in Settings, save, and try again.":
@@ -494,8 +532,15 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
       "你想做什么修改？例如“把标题调大”或“改成蓝色主题”",
     "Write prompt": "填写提示词",
     "Write instructions": "填写说明",
+    "We could not connect to the login service. Please refresh and try again.":
+      "无法连接登录服务，请刷新后重试。",
+    "Welcome back. Loading your workspace.": "欢迎回来，正在加载工作区。",
     "You are about to delete": "你即将删除",
     "You don't have any presentations yet.": "你还没有任何演示文稿。",
+    "Your password must be at least 6 characters.":
+      "密码必须至少 6 个字符。",
+    "Your username must be at least 3 characters.":
+      "用户名必须至少 3 个字符。",
     "You can continue without all fonts, but some text may not display correctly.":
       "你可以在字体不完整时继续，但部分文字可能无法正确显示。",
     "You have been disconnected from ChatGPT.": "你已断开 ChatGPT 连接。",
@@ -781,6 +826,7 @@ export const uiTranslations: Record<Locale, Record<string, string>> = {
       "例如：团队协作、现代办公室、日落群山…",
     "failed.": "失败。",
     "items": "项",
+    "your-admin-user": "你的管理员用户名",
   },
 };
 

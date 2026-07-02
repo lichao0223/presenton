@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { getApiUrl } from "@/utils/api";
 import { isAuthDisabled } from "@/utils/auth";
 import { formatFastApiDetail, UNAUTHORIZED_DETAIL } from "@/utils/authErrors";
 import { notify } from "@/components/ui/sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type AuthStatus = {
   configured: boolean;
@@ -20,6 +21,7 @@ const initialStatus: AuthStatus = {
 };
 
 export default function AuthGate() {
+  const { t } = useI18n();
   const [status, setStatus] = useState<AuthStatus>(initialStatus);
   const [isLoading, setIsLoading] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -29,51 +31,7 @@ export default function AuthGate() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const isSetupMode = useMemo(() => !status.configured, [status.configured]);
 
-  useEffect(() => {
-    if (isAuthDisabled()) {
-      setStatus({
-        configured: true,
-        authenticated: true,
-        username: "electron",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    void refreshStatus();
-  }, []);
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      isLoading ||
-      !status.authenticated ||
-      isRedirecting
-    ) {
-      return;
-    }
-
-    setIsRedirecting(true);
-    window.location.replace("/");
-  }, [isLoading, isRedirecting, status.authenticated]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || isLoading) {
-      return;
-    }
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("reason") === "unauthorized") {
-      if (status.configured && !status.authenticated) {
-        notify.error("Unauthorized", "Sign in to view this page.", {
-          id: "auth-unauthorized-redirect",
-          duration: 5000,
-        });
-      }
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, [isLoading, status.authenticated, status.configured]);
-
-  const refreshStatus = async () => {
+  const refreshStatus = useCallback(async () => {
     setIsLoading(true);
 
     try {
@@ -96,13 +54,57 @@ export default function AuthGate() {
     } catch (fetchError) {
       console.error(fetchError);
       notify.error(
-        "Could not load login",
-        "We could not connect to the login service. Please refresh and try again."
+        t("Could not load login"),
+        t("We could not connect to the login service. Please refresh and try again.")
       );
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (isAuthDisabled()) {
+      setStatus({
+        configured: true,
+        authenticated: true,
+        username: "electron",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    void refreshStatus();
+  }, [refreshStatus]);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      isLoading ||
+      !status.authenticated ||
+      isRedirecting
+    ) {
+      return;
+    }
+
+    setIsRedirecting(true);
+    window.location.replace("/");
+  }, [isLoading, isRedirecting, status.authenticated]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || isLoading) {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reason") === "unauthorized") {
+      if (status.configured && !status.authenticated) {
+        notify.error(t("Unauthorized"), t("Sign in to view this page."), {
+          id: "auth-unauthorized-redirect",
+          duration: 5000,
+        });
+      }
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [isLoading, status.authenticated, status.configured, t]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -110,24 +112,24 @@ export default function AuthGate() {
     const cleanedUsername = username.trim();
     if (cleanedUsername.length < 3) {
       notify.warning(
-        "Username too short",
-        "Your username must be at least 3 characters."
+        t("Username too short"),
+        t("Your username must be at least 3 characters.")
       );
       return;
     }
 
     if (password.length < 6) {
       notify.warning(
-        "Password too short",
-        "Your password must be at least 6 characters."
+        t("Password too short"),
+        t("Your password must be at least 6 characters.")
       );
       return;
     }
 
     if (isSetupMode && password !== confirmPassword) {
       notify.warning(
-        "Passwords do not match",
-        "Make sure both password fields match before continuing."
+        t("Passwords do not match"),
+        t("Make sure both password fields match before continuing.")
       );
       return;
     }
@@ -155,15 +157,15 @@ export default function AuthGate() {
         const detail = formatFastApiDetail(payload?.detail);
         if (response.status === 401) {
           notify.error(
-            "Sign-in failed",
+            t("Sign-in failed"),
             detail === UNAUTHORIZED_DETAIL
-              ? "The username or password is incorrect. Please try again."
+              ? t("The username or password is incorrect. Please try again.")
               : detail
           );
         } else {
           notify.error(
-            isSetupMode ? "Could not create account" : "Sign-in failed",
-            detail || "Something went wrong. Please try again."
+            isSetupMode ? t("Could not create account") : t("Sign-in failed"),
+            detail || t("Something went wrong. Please try again.")
           );
         }
         return;
@@ -177,7 +179,7 @@ export default function AuthGate() {
         });
         setPassword("");
         setConfirmPassword("");
-        notify.success("Account created", "Sign in with your new username and password to continue.", {
+        notify.success(t("Account created"), t("Sign in with your new username and password to continue."), {
           duration: 6000,
         });
         return;
@@ -191,14 +193,14 @@ export default function AuthGate() {
       setPassword("");
       setConfirmPassword("");
       notify.success(
-        "Signed in",
-        "Welcome back. Loading your workspace."
+        t("Signed in"),
+        t("Welcome back. Loading your workspace.")
       );
     } catch (submitError) {
       console.error(submitError);
       notify.error(
-        "Login unavailable",
-        "The login service is unavailable right now. Please try again in a moment."
+        t("Login unavailable"),
+        t("The login service is unavailable right now. Please try again in a moment.")
       );
     } finally {
       setIsSubmitting(false);
@@ -220,7 +222,9 @@ export default function AuthGate() {
             />
             <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-[#7C51F8]" />
             <h1 className="font-syne text-lg font-semibold text-black">Presenton</h1>
-            <p className="mt-3 font-syne text-sm text-[#000000CC]">Preparing your workspace…</p>
+            <p className="mt-3 font-syne text-sm text-[#000000CC]">
+              {t("Preparing your workspace...")}
+            </p>
             <div className="mt-6 flex justify-center gap-1.5">
               <span className="h-2 w-2 animate-pulse rounded-full bg-[#5146E5]" />
               <span
@@ -254,10 +258,10 @@ export default function AuthGate() {
             </div>
             <div>
               <p className="font-syne text-[10px] font-semibold uppercase tracking-[0.14em] text-[#7A5AF8]">
-                Secure instance
+                {t("Secure instance")}
               </p>
               <h1 className="mt-1 font-syne text-2xl font-semibold leading-tight text-black sm:text-[26px]">
-                {isSetupMode ? "Create your admin login" : "Sign in to continue"}
+                {isSetupMode ? t("Create your admin login") : t("Sign in to continue")}
               </h1>
             </div>
           </div>
@@ -265,21 +269,21 @@ export default function AuthGate() {
 
         <p className="font-syne text-base text-[#000000CC] sm:text-lg">
           {isSetupMode
-            ? "One-time setup for this deployment. You will use the same username and password on future visits."
-            : "This deployment is protected. Enter your credentials to open the app."}
+            ? t("One-time setup for this deployment. You will use the same username and password on future visits.")
+            : t("This deployment is protected. Enter your credentials to open the app.")}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           <div className="space-y-2">
             <label htmlFor="username" className="block font-syne text-sm font-medium text-black">
-              Username
+              {t("Username")}
             </label>
             <input
               id="username"
               autoComplete="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder="your-admin-user"
+              placeholder={t("your-admin-user")}
               className="w-full rounded-[11px] border border-[#EDEEEF] bg-white px-4 py-3 font-syne text-sm text-black outline-none transition placeholder:text-[#999999] focus:border-[#a49cfc] focus:ring-2 focus:ring-[#5146E5]/20"
               disabled={isSubmitting}
             />
@@ -287,7 +291,7 @@ export default function AuthGate() {
 
           <div className="space-y-2">
             <label htmlFor="password" className="block font-syne text-sm font-medium text-black">
-              Password
+              {t("Password")}
             </label>
             <input
               id="password"
@@ -295,7 +299,7 @@ export default function AuthGate() {
               autoComplete={isSetupMode ? "new-password" : "current-password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="At least 6 characters"
+              placeholder={t("At least 6 characters")}
               className="w-full rounded-[11px] border border-[#EDEEEF] bg-white px-4 py-3 font-syne text-sm text-black outline-none transition placeholder:text-[#999999] focus:border-[#a49cfc] focus:ring-2 focus:ring-[#5146E5]/20"
               disabled={isSubmitting}
             />
@@ -304,7 +308,7 @@ export default function AuthGate() {
           {isSetupMode ? (
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="block font-syne text-sm font-medium text-black">
-                Confirm password
+                {t("Confirm password")}
               </label>
               <input
                 id="confirmPassword"
@@ -312,7 +316,7 @@ export default function AuthGate() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                placeholder="Re-enter your password"
+                placeholder={t("Re-enter your password")}
                 className="w-full rounded-[11px] border border-[#EDEEEF] bg-white px-4 py-3 font-syne text-sm text-black outline-none transition placeholder:text-[#999999] focus:border-[#a49cfc] focus:ring-2 focus:ring-[#5146E5]/20"
                 disabled={isSubmitting}
               />
@@ -321,7 +325,7 @@ export default function AuthGate() {
 
           {!isSetupMode && status.configured ? (
             <p className="font-syne text-sm text-[#494A4D]">
-              Setup is complete for this instance. Use the username and password you configured.
+              {t("Setup is complete for this instance. Use the username and password you configured.")}
             </p>
           ) : null}
 
@@ -332,11 +336,11 @@ export default function AuthGate() {
           >
             {isSubmitting
               ? isSetupMode
-                ? "Saving credentials…"
-                : "Signing in…"
+                ? t("Saving credentials...")
+                : t("Signing in...")
               : isSetupMode
-                ? "Create account"
-                : "Sign in"}
+                ? t("Create account")
+                : t("Sign in")}
           </button>
         </form>
       </section>
